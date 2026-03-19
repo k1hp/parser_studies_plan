@@ -1,25 +1,33 @@
-from bs4 import BeautifulSoup
+﻿from typing import List
 import requests
+from bs4 import BeautifulSoup
 
-url = 'https://mauniver.ru/sveden/education/op/43292#prak'
 
-page = requests.get(url)
+class WebParsingService:
+    def __init__(self, url: str):
+        self.url = url
+        self.all_disciplines: List[str] = []
+        self.filtered_disciplines: List[str] = []
 
-# print(page.status_code)
+    def parse(self) -> List[str]:
+        response = requests.get(self.url)
+        response.raise_for_status()
 
-filteredDisceplins = [] # список для хранения отфильтрованных дисциплин
-allDisceplins = []
+        soup = BeautifulSoup(response.text, "html.parser")
 
-soup = BeautifulSoup(page.text, "html.parser")
+        
+        # отображаем как странице
+        self.all_disciplines = [
+            el.get_text(strip=True)
+            for el in soup.select("h1, p, a.esign")
+        ]
 
-# print(soup)
+        self.filtered_disciplines = [item for item in self.all_disciplines if item]
+        return self.filtered_disciplines
+    
 
-allDisceplins =[el.get_text(strip=True) for el in soup.find_all('h1')] + [el.get_text(strip=True) for el in soup.find_all('p')] + [el.get_text(strip=True) for el in soup.find_all('a', class_='esign')] 
-# print(allDisceplins)
-# + [el.get_text(strip=True) for el in soup.find_all('p')]
-
-filteredDisceplins = [data for data in allDisceplins if data]
-
-for data in filteredDisceplins:
-    print(data)
+if __name__ == "__main__":
+    service = WebParsingService("https://mauniver.ru/sveden/education/op/43292#prak")
+    for entry in service.parse():
+        print(entry)
 
