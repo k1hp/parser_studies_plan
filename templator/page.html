@@ -16,6 +16,7 @@ missing_programs - Список отсутствующих рабочих про
 missing_fos - Список отсутствующих ФОС
 missing_programs_practic - Список отсутствующих рабочих программ практики
 missing_methodical_materials - Список отсутствующих методических материалов
+
 program_dis - Название рабочей программы дисциплины
 fos - Название ФОС
 program_practic - Название рабочей программы практики
@@ -99,27 +100,43 @@ methodical_material - Название методического материа
             <h3>Отсутствующие компоненты</h3>
             <div class="missing-list">  
                 <div><strong>Рабочие программы дисциплин:</strong><br> 
-                    {% for program_dis in missing_programs %}
-                        <span class="component">{{ program_dis }}</span>
-                    {% endfor %}
-                </div>
+                    {% if missing_programs %} 
+                        {% for program_dis in missing_programs %}
+                            <li>{{ program_dis }}</li>
+                        {% endfor %}
+                    {% else %}
+                        Отсутствующих рабочих программ дисциплин нет
+                    {% endif %}
+                </div><br>
 
                 <div><strong>ФОС:</strong><br>
-                    {% for fos in missing_fos %}
-                        <span class="component">{{ fos }}</span>
-                    {% endfor %}
-                </div> 
+                    {% if missing_fos %}
+                        {% for fos in missing_fos %}
+                            <li>{{ fos }}</li>
+                        {% endfor %}
+                    {% else %}
+                        Отсутствующих ФОС нет
+                    {% endif %}
+                </div><br>
 
                 <div><strong>Рабочие программы практики:</strong><br> 
-                    {% for program_practic in missing_programs_practic %}
-                        <span class="component">{{ program_practic }}</span>
-                    {% endfor %}
-                </div>
+                    {% if missing_programs_practic %}
+                        {% for program_practic in missing_programs_practic %}
+                            <li>{{ program_practic }}</li>
+                        {% endfor %}
+                    {% else %}
+                        Отсутствующих рабочих программ практики нет
+                    {% endif %}
+                </div><br>
 
                 <div><strong>Методические материалы:</strong><br>
-                    {% for methodical_material in missing_methodical_materials %}
-                        <span class="component">{{ methodical_material }}</span>
-                    {% endfor %}
+                    {% if missing_methodical_materials  %}
+                        {% for methodical_material in missing_methodical_materials %}
+                            <li>{{ methodical_material }}</li>
+                        {% endfor %}
+                    {% else %}
+                        Отсутствующих методических материалов нет
+                    {% endif %}
                 </div>
             </div>
                
