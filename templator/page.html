@@ -1,0 +1,142 @@
+<!-- 
+verification_date - Дата проверки учебного плана
+curriculum_file - Название файла учебного плана
+site_url - URL сайта, на котором размещен учебный план
+specialty - Специальность
+curriculum_year - Год приема
+lvl_education - Уровень образования
+form_education - Форма обучения
+education_program - Наличие образовательной программы
+calendar_graphic - Наличие календарного учебного графика
+curriculum_plan - Наличие учебного плана
+gia_program - Наличие программы ГИА
+education_program_vosp - Наличие рабочей программы воспитания
+education_plan_vosp - Наличие календарного плана воспитательной работы
+missing_components - Список отсутствующих компонентов (рабочие программы дисциплин, ФОС, рабочие программы практики, методические материалы)
+program_dis - Название отсутствующей рабочей программы дисциплины
+fos - Название отсутствующего ФОС
+program_practic - Название отсутствующей рабочей программы практики
+met_mater - Название отсутствующего методического материала
+-->
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Отчет о проверке учебного плана</title>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="report-meta">
+                <div class="meta-item">
+                    <strong>Дата проверки:</strong> {{ verification_date }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Информация об учебном плане -->
+        <div>
+            <h3>Информация об учебном плане</h3>
+            <div>
+                <div><strong>Файл:</strong> {{ curriculum_file }}</div>
+                <div><strong>URL сайта:</strong> <a href="{{ site_url }}" target="_blank">{{ site_url }}</a></div>
+                <div><strong>Специальность:</strong> {{ specialty }}</div>
+                <div><strong>Год приема:</strong> {{ curriculum_year }}</div>
+                <div><strong>Уровень образования:</strong> {{ lvl_education }}</div>
+                <div><strong>Форма обучения:</strong> {{ form_education }}</div>
+                <br>
+                <div><strong>Образовательная программа:</strong> 
+                    {% if education_program %}
+                        <span style="color: green;">✅</span>
+                    {% else %}
+                        <span style="color: red;">❌</span>
+                    {% endif %}
+                </div>
+                <div><strong>Календарный учебный график:</strong> 
+                    {% if calendar_graphic %}
+                        <span style="color: green;">✅</span>
+                    {% else %}
+                        <span style="color: red;">❌</span>
+                    {% endif %}
+                </div>
+                <div><strong>Учебный план:</strong>
+                    {% if curriculum_plan %}
+                        <span style="color: green;">✅</span>
+                    {% else %}
+                        <span style="color: red;">❌</span>
+                    {% endif %}
+                </div>
+                <div><strong>Программа ГИА:</strong>
+                    {% if gia_program %}
+                        <span style="color: green;">✅</span>
+                    {% else %}
+                        <span style="color: red;">❌</span>
+                    {% endif %}
+                </div>
+                <div><strong>Рабочая программа воспитания:</strong> 
+                    {% if education_program_vosp %}
+                        <span style="color: green;">✅</span>
+                    {% else %}
+                        <span style="color: red;">❌</span>
+                    {% endif %}
+                </div>
+                <div><strong>Календарный план воспитательной работы:</strong> 
+                    {% if education_plan_vosp %}
+                        <span style="color: green;">✅</span>
+                    {% else %}
+                        <span style="color: red;">❌</span>
+                    {% endif %}
+                </div>
+                
+            </div>
+        </div>
+
+        <div class="missing-section">
+            <h3>Отсутствующие компоненты</h3>
+            <div class="missing-list">  
+                <div><strong>Рабочие программы дисциплин:</strong><br> 
+                    {% for program_dis in missing_components %}
+                        <span class="component">{{ program_dis }}</span>
+                    {% endfor %}
+                    {% else %}
+                    <div class="empty-missing">
+                        Отсутствующие программы дисциплин не найдены
+                    </div>
+                </div>
+
+                <div><strong>ФОС:</strong><br>
+                    {% for fos in missing_components %}
+                        <span class="component">{{ fos }}</span>
+                    {% endfor %}
+                    {% else %}
+                    <div class="empty-missing">
+                        Отсутствующие ФОС не найдены
+                    </div>
+                </div> 
+
+                <div><strong>Рабочие программы практики:</strong><br> 
+                    {% for program_practic in missing_components %}
+                        <span class="component">{{ program_practic }}</span>
+                    {% endfor %}
+                    {% else %}
+                    <div class="empty-missing">
+                        Отсутствующие программы практики не найдены
+                    </div>
+                </div>
+
+                <div><strong>Методические материалы:</strong><br>
+                    {% for met_mater in missing_components %}
+                        <span class="component">{{ met_mater }}</span>
+                    {% endfor %}
+                    {% else %}
+                    <div class="empty-missing">
+                        Отсутствующие методические материалы не найдены
+                    </div>
+                </div>
+            </div>
+               
+        </div>
+    </div>
+</body>
+</html>    
