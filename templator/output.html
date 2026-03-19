@@ -33,7 +33,7 @@ methodical_material - Название методического материа
         <div class="header">
             <div class="report-meta">
                 <div class="meta-item">
-                    <strong>Дата проверки:</strong> {{ verification_date }}
+                    <strong>Дата проверки:</strong> 19 марта 2026 г.
                 </div>
             </div>
         </div>
@@ -42,54 +42,42 @@ methodical_material - Название методического материа
         <div>
             <h3>Информация об учебном плане</h3>
             <div>
-                <div><strong>Файл:</strong> {{ curriculum_file }}</div>
-                <div><strong>URL сайта:</strong> <a href="{{ site_url }}" target="_blank">{{ site_url }}</a></div>
-                <div><strong>Специальность:</strong> {{ specialty }}</div>
-                <div><strong>Год приема:</strong> {{ curriculum_year }}</div>
-                <div><strong>Уровень образования:</strong> {{ lvl_education }}</div>
-                <div><strong>Форма обучения:</strong> {{ form_education }}</div>
+                <div><strong>Файл:</strong> plan.pdf</div>
+                <div><strong>URL сайта:</strong> <a href="https://example.com" target="_blank">https://example.com</a></div>
+                <div><strong>Специальность:</strong> Информатика</div>
+                <div><strong>Год приема:</strong> 2023</div>
+                <div><strong>Уровень образования:</strong> Бакалавриат</div>
+                <div><strong>Форма обучения:</strong> Очная</div>
                 <br>
                 <div><strong>Образовательная программа:</strong> 
-                    {% if education_program %}
+                    
                         <span style="color: green;">✅</span>
-                    {% else %}
-                        <span style="color: red;">❌</span>
-                    {% endif %}
+                    
                 </div>
                 <div><strong>Календарный учебный график:</strong> 
-                    {% if calendar_graphic %}
-                        <span style="color: green;">✅</span>
-                    {% else %}
+                    
                         <span style="color: red;">❌</span>
-                    {% endif %}
+                    
                 </div>
                 <div><strong>Учебный план:</strong>
-                    {% if curriculum_plan %}
+                    
                         <span style="color: green;">✅</span>
-                    {% else %}
-                        <span style="color: red;">❌</span>
-                    {% endif %}
+                    
                 </div>
                 <div><strong>Программа ГИА:</strong>
-                    {% if gia_program %}
-                        <span style="color: green;">✅</span>
-                    {% else %}
+                    
                         <span style="color: red;">❌</span>
-                    {% endif %}
+                    
                 </div>
                 <div><strong>Рабочая программа воспитания:</strong> 
-                    {% if education_program_vosp %}
+                    
                         <span style="color: green;">✅</span>
-                    {% else %}
-                        <span style="color: red;">❌</span>
-                    {% endif %}
+                    
                 </div>
                 <div><strong>Календарный план воспитательной работы:</strong> 
-                    {% if education_plan_vosp %}
-                        <span style="color: green;">✅</span>
-                    {% else %}
+                    
                         <span style="color: red;">❌</span>
-                    {% endif %}
+                    
                 </div>
                 
             </div>
@@ -99,27 +87,29 @@ methodical_material - Название методического материа
             <h3>Отсутствующие компоненты</h3>
             <div class="missing-list">  
                 <div><strong>Рабочие программы дисциплин:</strong><br> 
-                    {% for program_dis in missing_programs %}
-                        <span class="component">{{ program_dis }}</span>
-                    {% endfor %}
+                    
+                        <span class="component">Математика</span>
+                    
+                        <span class="component">Физика</span>
+                    
                 </div>
 
                 <div><strong>ФОС:</strong><br>
-                    {% for fos in missing_fos %}
-                        <span class="component">{{ fos }}</span>
-                    {% endfor %}
+                    
+                        <span class="component">ФОС1</span>
+                    
                 </div> 
 
                 <div><strong>Рабочие программы практики:</strong><br> 
-                    {% for program_practic in missing_programs_practic %}
-                        <span class="component">{{ program_practic }}</span>
-                    {% endfor %}
+                    
                 </div>
 
                 <div><strong>Методические материалы:</strong><br>
-                    {% for methodical_material in missing_methodical_materials %}
-                        <span class="component">{{ methodical_material }}</span>
-                    {% endfor %}
+                    
+                        <span class="component">Методичка1</span>
+                    
+                        <span class="component">Методичка2</span>
+                    
                 </div>
             </div>
                
