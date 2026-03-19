@@ -1,0 +1,66 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+bin/
+include/
+lib/
+
+# IDE/Editor settings
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment variables (secrets)
+.env
+.flaskenv
+*.local
+
+# Logs and databases
+*.log
+.sqlite
+*.db
+
+# Package management / Build
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Testing / Coverage
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Poetry
+poetry.lock
+
+# Pipenv
+Pipfile.lock
