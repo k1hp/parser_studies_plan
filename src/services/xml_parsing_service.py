@@ -2,7 +2,7 @@
 # все по своим файлам
 
 class XmlParsingService:
-    def __init__(self, files: dict | bytes):
+    def __init__(self, files: list[dict | bytes]):
         ...
 
 class WebParsingService:
