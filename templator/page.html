@@ -42,105 +42,112 @@ methodical_material - Название методического материа
         <!-- Информация об учебном плане -->
         <div>
             <h3>Информация об учебном плане</h3>
-            <div>
-                <div><strong>Файл:</strong> {{ curriculum_file }}</div>
-                <div><strong>URL сайта:</strong> <a href="{{ site_url }}" target="_blank">{{ site_url }}</a></div>
-                <div><strong>Специальность:</strong> {{ specialty }}</div>
-                <div><strong>Год приема:</strong> {{ curriculum_year }}</div>
-                <div><strong>Уровень образования:</strong> {{ lvl_education }}</div>
-                <div><strong>Форма обучения:</strong> {{ form_education }}</div>
+            {% for item in items %}
+            <details>
+                <summary>Образовательная программа: {{ item.specialty }} ({{ item.curriculum_year }})</summary>
                 <br>
-                <div><strong>Образовательная программа:</strong> 
-                    {% if education_program %}
-                        <span style="color: green;">✅</span>
-                    {% else %}
-                        <span style="color: red;">❌</span>
-                    {% endif %}
-                </div>
-                <div><strong>Календарный учебный график:</strong> 
-                    {% if calendar_graphic %}
-                        <span style="color: green;">✅</span>
-                    {% else %}
-                        <span style="color: red;">❌</span>
-                    {% endif %}
-                </div>
-                <div><strong>Учебный план:</strong>
-                    {% if curriculum_plan %}
-                        <span style="color: green;">✅</span>
-                    {% else %}
-                        <span style="color: red;">❌</span>
-                    {% endif %}
-                </div>
-                <div><strong>Программа ГИА:</strong>
-                    {% if gia_program %}
-                        <span style="color: green;">✅</span>
-                    {% else %}
-                        <span style="color: red;">❌</span>
-                    {% endif %}
-                </div>
-                <div><strong>Рабочая программа воспитания:</strong> 
-                    {% if education_program_vosp %}
-                        <span style="color: green;">✅</span>
-                    {% else %}
-                        <span style="color: red;">❌</span>
-                    {% endif %}
-                </div>
-                <div><strong>Календарный план воспитательной работы:</strong> 
-                    {% if education_plan_vosp %}
-                        <span style="color: green;">✅</span>
-                    {% else %}
-                        <span style="color: red;">❌</span>
-                    {% endif %}
-                </div>
-                
-            </div>
-        </div>
+                <div class="item" data-page="{{ loop.index }}"> 
+                    <div><strong>Файл:</strong> {{ item.curriculum_file }}</div>
+                    <div><strong>URL сайта:</strong> <a href="{{ site_url }}" target="_blank">{{ item.site_url }}</a></div>
+                    <div><strong>Специальность:</strong> {{ item.specialty }}</div>
+                    <div><strong>Год приема:</strong> {{ item.curriculum_year }}</div>
+                    <div><strong>Уровень образования:</strong> {{ item.lvl_education }}</div>
+                    <div><strong>Форма обучения:</strong> {{ item.form_education }}</div>
+                    <br>
+                    <div><strong>Образовательная программа:</strong> 
+                        {% if item.education_program %}
+                            <span style="color: green;"> + </span>
+                        {% else %}
+                            <span style="color: red;"> - </span>
+                        {% endif %}
+                    </div>
+                    <div><strong>Календарный учебный график:</strong> 
+                        {% if item.calendar_graphic %}
+                            <span style="color: green;"> + </span>
+                        {% else %}
+                            <span style="color: red;"> - </span>
+                        {% endif %}
+                    </div>
+                    <div><strong>Учебный план:</strong>
+                        {% if item.curriculum_plan %}
+                            <span style="color: green;"> + </span>
+                        {% else %}
+                            <span style="color: red;"> - </span>
+                        {% endif %}
+                    </div>
+                    <div><strong>Программа ГИА:</strong>
+                        {% if item.gia_program %}
+                            <span style="color: green;"> + </span>
+                        {% else %}
+                            <span style="color: red;"> - </span>
+                        {% endif %}
+                    </div>
+                    <div><strong>Рабочая программа воспитания:</strong> 
+                        {% if item.education_program_vosp %}
+                            <span style="color: green;"> + </span>
+                        {% else %}
+                            <span style="color: red;"> - </span>
+                        {% endif %}
+                    </div>
+                    <div><strong>Календарный план воспитательной работы:</strong> 
+                        {% if item.education_plan_vosp %}
+                            <span style="color: green;"> + </span>
+                        {% else %}
+                            <span style="color: red;"> - </span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="missing-section">
+                        <h3>Отсутствующие компоненты</h3>
+                        <div class="missing-list">  
+                            <div><strong>Рабочие программы дисциплин:</strong><br> 
+                                {% if item.missing_programs %} 
+                                    {% for program_dis in item.missing_programs %}
+                                        <li>{{ program_dis }}</li>
+                                    {% endfor %}
+                                {% else %}
+                                    Отсутствующих рабочих программ дисциплин нет
+                                {% endif %}
+                            </div><br>
 
-        <div class="missing-section">
-            <h3>Отсутствующие компоненты</h3>
-            <div class="missing-list">  
-                <div><strong>Рабочие программы дисциплин:</strong><br> 
-                    {% if missing_programs %} 
-                        {% for program_dis in missing_programs %}
-                            <li>{{ program_dis }}</li>
-                        {% endfor %}
-                    {% else %}
-                        Отсутствующих рабочих программ дисциплин нет
-                    {% endif %}
-                </div><br>
+                            <div><strong>ФОС:</strong><br>
+                                {% if item.missing_fos %}
+                                    {% for fos in item.missing_fos %}
+                                        <li>{{ fos }}</li>
+                                    {% endfor %}
+                                {% else %}
+                                    Отсутствующих ФОС нет
+                                {% endif %}
+                            </div><br>
 
-                <div><strong>ФОС:</strong><br>
-                    {% if missing_fos %}
-                        {% for fos in missing_fos %}
-                            <li>{{ fos }}</li>
-                        {% endfor %}
-                    {% else %}
-                        Отсутствующих ФОС нет
-                    {% endif %}
-                </div><br>
+                            <div><strong>Рабочие программы практики:</strong><br> 
+                                {% if item.missing_programs_practic %}
+                                    {% for program_practic in item.missing_programs_practic %}
+                                        <li>{{ program_practic }}</li>
+                                    {% endfor %}
+                                {% else %}
+                                    Отсутствующих рабочих программ практики нет
+                                {% endif %}
+                            </div><br>
 
-                <div><strong>Рабочие программы практики:</strong><br> 
-                    {% if missing_programs_practic %}
-                        {% for program_practic in missing_programs_practic %}
-                            <li>{{ program_practic }}</li>
-                        {% endfor %}
-                    {% else %}
-                        Отсутствующих рабочих программ практики нет
-                    {% endif %}
-                </div><br>
-
-                <div><strong>Методические материалы:</strong><br>
-                    {% if missing_methodical_materials  %}
-                        {% for methodical_material in missing_methodical_materials %}
-                            <li>{{ methodical_material }}</li>
-                        {% endfor %}
-                    {% else %}
-                        Отсутствующих методических материалов нет
-                    {% endif %}
+                            <div><strong>Методические материалы:</strong><br>
+                                {% if item.missing_methodical_materials  %}
+                                    {% for methodical_material in item.missing_methodical_materials %}
+                                        <li>{{ methodical_material }}</li>
+                                    {% endfor %}
+                                {% else %}
+                                    Отсутствующих методических материалов нет
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-               
+                <br>
+            </details>
+            {% endfor %}
         </div>
     </div>
 </body>
+
+
 </html>    
