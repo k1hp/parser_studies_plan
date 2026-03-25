@@ -10,4 +10,4 @@ class ResponseModel(BaseModel):
     direction_code: str = Field(..., description="Код направления (шифр)")
     direction_name: str = Field(..., description="Название направления")
     start_year: int = Field(..., description="Год начала обучения")
-    disciplines: List[DisciplineDetail] = Field(..., description="Список дисциплин")
+    disciplines: list[DisciplineDetail] = Field(..., description="Список дисциплин")

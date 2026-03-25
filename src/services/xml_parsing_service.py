@@ -1,38 +1,9 @@
-from typing import List
 from datetime import datetime
 import os
 import xml.etree.ElementTree as ET
 import re
 from models.response_model_xml_parser import ResponseModel, DisciplineDetail
-
-
-class FileManager:
-
-    def __init__(self, folder_path: str):
-        self.directory = folder_path
-        self.file_path = ""
-
-    def read_file_content(self) -> bytes:
-        if not self.file_path:
-            return b""
-        with open(self.file_path, 'rb') as f:
-            return f.read()
-
-    # Функция для получения всех файлов из папки с указанным расширением (пока что из папки directory на уровне выше)
-    def get_files_in_directory(self, extension: str = ".xml" or ".plx") -> List[str]:
-        if not os.path.exists(self.directory):
-            print(f"Ошибка: директории {self.directory} не существует!")
-            return []
-
-        return [
-            os.path.join(self.directory, f)
-            for f in os.listdir(self.directory)
-            if f.endswith(extension)
-        ]
-
-    def set_current_file(self, path: str):
-        self.file_path = path
-
+from services.file_manager import FileManager
 
 class PlxDataExtractor:
 
@@ -80,7 +51,7 @@ class PlxDataExtractor:
         return datetime.now().year
 
     @staticmethod
-    def extract_disciplines_details(root: ET.Element) -> List[DisciplineDetail]:
+    def extract_disciplines_details(root: ET.Element) -> list[DisciplineDetail]:
         unique_disciplines = []
 
         try:
@@ -137,34 +108,16 @@ class XmlParsingService:
             print(f"Неожиданная ошибка при парсинге: {e}")
             return None
 
-    def extract_all_files(self) -> List[ResponseModel]:
+    def extract_all(self, contents: list[bytes]) -> list[ResponseModel]:
         results = []
-        files = self.file_manager.get_files_in_directory(extension='.plx' or '.xml')
 
-        for file_path in files:
-            self.file_manager.set_current_file(file_path)
-            response = self.extract_response_data()
-            file_name = os.path.basename(file_path)
-            self.print_response(response, file_name)
+        for content in contents:
+            response = self.extract_from_content(content)
             results.append(response)
 
         return results
 
-    # Это функция для работы JSON представления, без неё не работает
-    def extract_all_with_paths(self) -> list[tuple[ResponseModel, str]]:
-        results = []
-        files = self.file_manager.get_files_in_directory(extension='.plx' or '.xml')
-
-        for file_path in files:
-            self.file_manager.set_current_file(file_path)
-            response = self.extract_response_data()
-            results.append((response, file_path))
-
-        return results
-
-
-    def extract_response_data(self) -> ResponseModel:
-        content = self.file_manager.read_file_content()
+    def extract_from_content(self, content: bytes) -> ResponseModel:
         root = self._parse_xml(content)
 
         if root is None:
@@ -188,38 +141,18 @@ class XmlParsingService:
             disciplines=disciplines
         )
 
-    def print_response(self, response: ResponseModel, file_name: str) -> None:
-        print("=" * 120)
-        print(f"РЕЗУЛЬТАТ ПАРСИНГА ФАЙЛА: {file_name}")
-        print("=" * 120)
-        print(f"\nКод направления: {response.direction_code}")
-        print(f"Название направления: {response.direction_name}")
-        print(f"Год начала обучения: {response.start_year}")
-        print(f"\nСПИСОК ДИСЦИПЛИН (всего: {len(response.disciplines)}):")
-        print("=" * 120)
-
-        if response.disciplines:
-            for i, disc in enumerate(response.disciplines, 1):
-                print(f"\n{i}. {disc.discipline_name}")
-                print(f"   Код дисциплины: {disc.discipline_code or 'Не указан'}")
-                print("-" * 100)
-        else:
-            print("\n  Дисциплины не найдены")
-
-        print("=" * 120)
-
 
 if __name__ == "__main__":
     current_script_dir = os.path.dirname(os.path.abspath(__file__))
     folder_path = os.path.abspath(os.path.join(current_script_dir, "..", "directory")) # Вероятно, нужно будет изменить в будущем путь к папке
     file_manager = FileManager(folder_path)
     extractor = XmlParsingService(file_manager)
-    extracted_items = extractor.extract_all_with_paths()
+    files = file_manager.get_files_in_directory()
+    contents = file_manager.get_files_contents(files)
+    extracted_items = extractor.extract_all(contents)
 
     if extracted_items:
-        for response, file_path in extracted_items:
-            file_name = os.path.basename(file_path)
-            extractor.print_response(response, file_name)
+        for response in extracted_items:
 
             print("\nJSON представление:")
             print(response.model_dump_json(indent=2, ensure_ascii=False))
