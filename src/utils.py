@@ -1,5 +1,3 @@
-import logging
-
 from loguru import logger
 from models.response_model_xml_parser import ResponseModel
 import sys
