@@ -6,6 +6,7 @@ import uvicorn
 
 from src.dependencies import get_analyze_service
 from src.services.analyze_service import AnalyzeService
+from src.utils import applogger
 
 app = FastAPI()
 router = APIRouter(prefix="/api")
@@ -14,11 +15,15 @@ REPORT_FORMATS = Literal["json", "html", "pdf"]
 
 
 @router.post("/compare/{report_format}")
-def analyze(url: str, report_format: REPORT_FORMATS, file: UploadFile = File(...),
+async def analyze(url: str, report_format: REPORT_FORMATS, file: UploadFile = File(...),
             analyze_service: AnalyzeService = Depends(get_analyze_service)):
     # TODO валидация url
-    # response: ... = analyze_service.analyze_one()
-    ...
+    if report_format == "json":
+        content = await file.read()
+        applogger.debug(type(content))
+        applogger.debug(content)
+        return analyze_service.analyze_one(url, content)
+
 
 
 @router.post("/compare/files/{report_format}")
