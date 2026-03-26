@@ -1,5 +1,7 @@
 from pydantic import BaseModel, Field
 
+from src.schemas.xml_schemas import DisciplineDetail
+
 
 class CurriculumModel(BaseModel):
     specialty: str = Field(..., description="Название специальности")
@@ -11,11 +13,11 @@ class CurriculumModel(BaseModel):
     calendar_graphic: bool = Field(..., description="Наличие календарного учебного графика")
     education_plan: bool = Field(..., description="Наличие учебного плана")
 
-    all_programs: list[str] = Field(default=[], description="Список всех образовательных программ")
-    working_programs: list[str] = Field(default=[], description="Список рабочих программ дисциплин")
-    fos_materials: list[str] = Field(default=[], description="Список ФОС материалов")
-    practic_programs: list[str] = Field(default=[], description="Список программ практик")
-    methodical_materials: list[str] = Field(default=[], description="Список методических материалов")
+    # all_programs: list[str] = Field(default=[], description="Список всех образовательных программ")
+    working_programs: list[DisciplineDetail] = Field(default=[], description="Список рабочих программ дисциплин")
+    fos_materials: list[DisciplineDetail] = Field(default=[], description="Список ФОС материалов")
+    practic_programs: list[str] = Field(default=[], description="Список программ практик (не сравниваем)")
+    methodical_materials: list[DisciplineDetail] = Field(default=[], description="Список методических материалов")
 
     gia_program: bool = Field(..., description="Наличие раздела 'ГИА'")
     education_program_vosp: bool = Field(..., description="Наличие раздела 'Рабочая программа воспитания'")

@@ -15,5 +15,5 @@ class WebParsingService:
     def __init__(self):
         ...
 
-    def parse_url(self, url: str) -> list[CurriculumModel]:
+    def parse_url(self, url: str) -> CurriculumModel:
         ...
