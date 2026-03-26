@@ -55,11 +55,70 @@
                 console.log('URL очищен');
             });
 
+            function showError(message) {
+                outputContent.innerHTML = `<div class="error">Ошибка: ${message}</div>`;
+            }
+            
+            function showSuccess(data) {
+                outputContent.innerHTML = `
+                    <div class="success">Данные успешно отправлены!</div>
+                    <pre class="response-data">${JSON.stringify(data, null, 2)}</pre>
+                `;
+            }
+            // Функция для отправки данных на сервер
+            async function sendToServer(url, fileData) {
+                const formData = new FormData();
+                
+                formData.append('url', url);
+            
+                if (fileData) {
+                    formData.append('file', fileData);
+                }
+                
+                try {
+                    const response = await fetch('http://127.0.0.1:8000/api/compare/json', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const result = await response.json();
+                    console.log('Ответ сервера:', result);
+                    return result;
+                    
+                } catch (error) {
+                    console.error('Ошибка при отправке:', error);
+                    throw error;
+                }
+            }
+
             // Обработчик кнопки "Отправить"
-            submitBtn.addEventListener('click', function() {
+            submitBtn.addEventListener('click', async function() {
                 let fileName = file ? file.name : 'Файл не выбран';
                 let currentUrl = urlInput.value.trim() !== '' ? urlInput.value : 'URL не указан';
                 urlValue = urlInput.value;
+
+                try {
+                    
+                    const result = await sendToServer(currentUrl, file);
+                    // Отображаем успешный результат
+                    showSuccess(result);
+                    
+                } catch (error) {
+                    // Отображаем ошибку
+                    showError(error.message);
+                    
+                    // Дополнительная информация в консоль
+                    console.error('Детали ошибки:', {
+                        url: currentUrl,
+                        file: file ? file.name : null,
+                        error: error
+                    });
+                }
+            
                 
                 const outputText = `URL: ${currentUrl}\nНазвание файла: ${fileName}`;
                 outputContent.innerText = outputText;
