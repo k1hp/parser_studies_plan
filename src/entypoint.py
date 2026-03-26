@@ -14,11 +14,13 @@ REPORT_FORMATS = Literal["json", "html", "pdf"]
 
 
 @router.post("/compare/{report_format}")
-def analyze(url: str, report_format: REPORT_FORMATS, file: UploadFile = File(...),
+async def analyze(url: str, report_format: REPORT_FORMATS, file: UploadFile = File(...),
             analyze_service: AnalyzeService = Depends(get_analyze_service)):
     # TODO валидация url
-    # response: ... = analyze_service.analyze_one()
-    ...
+    if report_format == "json":
+        print(type(await file.read()))
+        return analyze_service.analyze_one(url, await file.read())
+
 
 
 @router.post("/compare/files/{report_format}")

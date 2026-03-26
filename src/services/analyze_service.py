@@ -9,7 +9,7 @@ class AnalyzeService:
         self.web_parser_service = web_parser_service
         self.xml_parser_service = xml_parser_service
     # 1. общая функция анализа
-    def _compare_models(self, web_object: CurriculumModel, xml_object: ResponseModel):
+    def _compare_models(self, web_object: CurriculumModel, xml_object: ResponseModel) -> ApiResponseSchema:
         result: dict = {}
 
         for key, value in web_object.model_dump():
@@ -22,11 +22,13 @@ class AnalyzeService:
 
             else:
                 raise ValueError(f"Unexpected value {value} of {key}")
+        return ApiResponseSchema.model_validate(result)
 
     # 2. анализ одной и получение нужного года
     def analyze_one(self, url: str, content: bytes) -> ApiResponseSchema:
         web_data = self.web_parser_service.parse_url(url)
         xml_data = self.extract_from_content(content)
+        return self._compare_models(web_data, xml_data)
 
 
 
@@ -49,13 +51,13 @@ class AnalyzeService:
 if __name__ == "__main__":
     service = AnalyzeService(WebParsingService(), XmlParsingService())
 
-    ls = [DisciplineDetail(discipline_name="name", discipline_code=str(i)) for i in range(10)]
+    xml = [DisciplineDetail(discipline_name="name1", discipline_code=str(i)) for i in range(10)]
     ls3 = [DisciplineDetail(discipline_name="name_MM", discipline_code=str(i)) for i in range(10)]
 
-    print(ls[0].to_tuple)
+    print(xml[0].to_tuple)
 
     # list =
-    res = service._compare_lists(ls, ls3)
+    res = service._compare_lists(xml, ls3)
     print(res)
 
 
