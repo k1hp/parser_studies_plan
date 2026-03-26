@@ -59,18 +59,18 @@
                 outputContent.innerHTML = `<div class="error">Ошибка: ${message}</div>`;
             }
             
-            function showSuccess(data) {
-                outputContent.innerHTML = `
-                    <div class="success">Данные успешно отправлены!</div>
-                    <pre class="response-data">${JSON.stringify(data, null, 2)}</pre>
-                `;
+            
+
+            function showResult(data) {
+                // Сохраняем результат в localStorage
+                localStorage.setItem('compareResult', JSON.stringify(data));
+                // Перенаправляем на страницу с результатом
+                window.location.href = 'page3_result.html';
             }
             // Функция для отправки данных на сервер
             async function sendToServer(url, fileData) {
-                const formData = new FormData();
-                
-                // formData.append('url', url);
-            
+                const formData = new FormData();    
+
                 if (fileData) {
                     formData.append('file', fileData);
                 }
@@ -104,8 +104,8 @@
                 try {
                     
                     const result = await sendToServer(currentUrl, file);
-                    // Отображаем успешный результат
-                    showSuccess(result);
+                    
+                    showResult(result);
                     
                 } catch (error) {
                     // Отображаем ошибку
