@@ -64,3 +64,6 @@ poetry.lock
 
 # Pipenv
 Pipfile.lock
+
+# vscode
+.vs
