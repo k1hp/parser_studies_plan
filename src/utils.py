@@ -15,7 +15,6 @@ class AppLogger:
     def get_logger(self):
         return logger
 
-
 def print_response(response: ResponseModel) -> None:
     applogger.debug("=" * 120)
     applogger.debug(f"\nКод направления: {response.direction_code}")
