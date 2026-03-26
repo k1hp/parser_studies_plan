@@ -121,6 +121,7 @@ class XmlParsingService:
         root = self._parse_xml(content)
 
         if root is None:
+            applogger.warning(f"root пустой (content пустой), используем пустой ResponseModel")
             current_year = datetime.now().year
             return ResponseModel(
                 direction_code="",
