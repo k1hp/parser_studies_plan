@@ -2,6 +2,7 @@ from datetime import datetime
 import os
 import xml.etree.ElementTree as ET
 import re
+from utils import applogger
 from models.response_model_xml_parser import ResponseModel, DisciplineDetail
 from services.file_manager import FileManager
 
@@ -16,7 +17,7 @@ class PlxDataExtractor:
                     if code:
                         return code.strip()
         except Exception as e:
-            print(f"Ошибка при извлечении кода направления: {e}")
+            applogger.error(f"Ошибка при извлечении кода направления: {e}")
         return ""
 
     @staticmethod
@@ -28,7 +29,7 @@ class PlxDataExtractor:
                     if name:
                         return name.strip()
         except Exception as e:
-            print(f"Ошибка при извлечении названия направления: {e}")
+            applogger.error(f"Ошибка при извлечении названия направления: {e}")
         return ""
 
     @staticmethod
@@ -46,7 +47,7 @@ class PlxDataExtractor:
                                 return int(match.group(1))
 
         except Exception as e:
-            print(f"Ошибка при извлечении года начала обучения: {e}")
+            applogger.error(f"Ошибка при извлечении года начала обучения: {e}")
 
         return datetime.now().year
 
@@ -76,14 +77,13 @@ class PlxDataExtractor:
             return unique_disciplines
 
         except Exception as e:
-            print(f"Ошибка при извлечении информации о дисциплинах: {e}")
+            applogger.error(f"Ошибка при извлечении информации о дисциплинах: {e}")
             return []
 
 
 class XmlParsingService:
 
     def __init__(self, file_manager: FileManager):
-        self.file_manager = file_manager
         self._root = None
 
     def _parse_xml(self, content: bytes) -> ET.Element | None:
@@ -102,10 +102,10 @@ class XmlParsingService:
             return self._root
 
         except ET.ParseError as e:
-            print(f"Ошибка парсинга XML: {e}")
+            applogger.error(f"Ошибка парсинга XML: {e}")
             return None
         except Exception as e:
-            print(f"Неожиданная ошибка при парсинге: {e}")
+            applogger.error(f"Неожиданная ошибка при парсинге: {e}")
             return None
 
     def extract_all(self, contents: list[bytes]) -> list[ResponseModel]:
@@ -144,7 +144,7 @@ class XmlParsingService:
 
 if __name__ == "__main__":
     current_script_dir = os.path.dirname(os.path.abspath(__file__))
-    folder_path = os.path.abspath(os.path.join(current_script_dir, "..", "directory")) # Вероятно, нужно будет изменить в будущем путь к папке
+    folder_path = os.path.abspath(os.path.join(current_script_dir, "..", "directory"))
     file_manager = FileManager(folder_path)
     extractor = XmlParsingService(file_manager)
     files = file_manager.get_files_in_directory()
@@ -154,8 +154,8 @@ if __name__ == "__main__":
     if extracted_items:
         for response in extracted_items:
 
-            print("\nJSON представление:")
-            print(response.model_dump_json(indent=2, ensure_ascii=False))
+            applogger.debug("\nJSON представление:")
+            applogger.debug(response.model_dump_json(indent=2, ensure_ascii=False))
 
     else:
-        print(f"Файлы не найдены в директории: {folder_path}")
+        applogger.info(f"Файлы не найдены в директории: {folder_path}")

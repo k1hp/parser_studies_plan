@@ -1,6 +1,4 @@
 from pydantic import BaseModel, Field
-from typing import List
-
 
 class DisciplineDetail(BaseModel):
     discipline_name: str = Field(..., description="Название дисциплины")

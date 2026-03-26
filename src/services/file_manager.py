@@ -1,4 +1,5 @@
 import os
+from utils import applogger
 
 class FileManager:
 
@@ -14,13 +15,13 @@ class FileManager:
                 with open(file_path, 'rb') as f:
                     contents.append(f.read())
             except Exception as e:
-                print(f"Не удалось прочитать файл {file_path}: {e}")
+                applogger.error(f"Не удалось прочитать файл {file_path}: {e}")
         return contents
 
     # Функция для получения всех файлов из папки с указанным расширением (пока что из папки directory на уровне выше)
     def get_files_in_directory(self, extension: tuple[str] = (".plx", ".xml")) -> list[str]:
         if not os.path.exists(self.directory):
-            print(f"Ошибка: директории {self.directory} не существует!")
+            applogger.error(f"Ошибка: директории {self.directory} не существует!")
             return []
 
         if extension is None:
@@ -33,10 +34,10 @@ class FileManager:
             if any(f.endswith(ext) for ext in extensions):
                 files.append(os.path.join(self.directory, f))
 
-        print(f"Найдено файлов: {len(files)} в директории {self.directory}")
+        applogger.debug(f"Найдено файлов: {len(files)} в директории {self.directory}")
         if files:
-            print("Список файлов:")
+            applogger.debug("Список файлов:")
             for f in files:
-                print(f"  - {os.path.basename(f)}")
+                applogger.debug(f"  - {os.path.basename(f)}")
 
         return files
