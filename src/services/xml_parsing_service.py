@@ -3,7 +3,9 @@ import os
 import xml.etree.ElementTree as ET
 import re
 from src.utils import applogger
-from src.models.response_model_xml_parser import ResponseModel, DisciplineDetail
+from src.schemas.xml_schemas import ResponseModel, DisciplineDetail
+from src.schemas.web_schemas import CurriculumModel
+# from src.models.response_model_xml_parser import ResponseModel, DisciplineDetail
 from src.services.file_manager import FileManager
 
 class PlxDataExtractor:
@@ -82,8 +84,7 @@ class PlxDataExtractor:
 
 # примеры вам, то есть конечная точка
 # все по своим файлам
-from src.schemas.xml_schemas import ResponseModel, DisciplineDetail
-from src.schemas.web_schemas import CurriculumModel
+
 
 
 class XmlParsingService:
@@ -146,7 +147,7 @@ class WebParsingService:
         ...
 
     def parse_url(self, url: str) -> CurriculumModel:
-        CurriculumModel.model_validate({
+        return CurriculumModel.model_validate({
             "specialty": "09.03.01 Информатика и вычислительная техника",
             "discipline_code": "09.03.01",
             "curriculum_year": "2024",

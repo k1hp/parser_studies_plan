@@ -6,6 +6,7 @@ import uvicorn
 
 from src.dependencies import get_analyze_service
 from src.services.analyze_service import AnalyzeService
+from src.utils import applogger
 
 app = FastAPI()
 router = APIRouter(prefix="/api")
@@ -18,8 +19,10 @@ async def analyze(url: str, report_format: REPORT_FORMATS, file: UploadFile = Fi
             analyze_service: AnalyzeService = Depends(get_analyze_service)):
     # TODO валидация url
     if report_format == "json":
-        print(type(await file.read()))
-        return analyze_service.analyze_one(url, await file.read())
+        content = await file.read()
+        applogger.debug(type(content))
+        applogger.debug(content)
+        return analyze_service.analyze_one(url, content)
 
 
 

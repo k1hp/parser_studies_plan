@@ -2,6 +2,7 @@ from src.schemas.response_schemas import ApiResponseSchema
 from src.schemas.web_schemas import CurriculumModel
 from src.schemas.xml_schemas import DisciplineDetail, ResponseModel
 from src.services.xml_parsing_service import WebParsingService, XmlParsingService
+from src.utils import applogger
 
 
 class AnalyzeService:
@@ -12,7 +13,7 @@ class AnalyzeService:
     def _compare_models(self, web_object: CurriculumModel, xml_object: ResponseModel) -> ApiResponseSchema:
         result: dict = {}
 
-        for key, value in web_object.model_dump():
+        for key, value in web_object.model_dump().items():
             if key == "speciality" and value == xml_object.direction_name:
                 result[key] = value
             elif key == "discipline_code" and value == xml_object.direction_code:
@@ -21,13 +22,15 @@ class AnalyzeService:
                 result[key] = self._compare_lists(xml_object.disciplines, value)
 
             else:
-                raise ValueError(f"Unexpected value {value} of {key}")
+                result[key] = value
+                # raise ValueError(f"Unexpected value {value} of {key}")
         return ApiResponseSchema.model_validate(result)
 
     # 2. анализ одной и получение нужного года
     def analyze_one(self, url: str, content: bytes) -> ApiResponseSchema:
         web_data = self.web_parser_service.parse_url(url)
-        xml_data = self.extract_from_content(content)
+        applogger.debug("web data", web_data)
+        xml_data = self.xml_parser_service.extract_from_content(content)
         return self._compare_models(web_data, xml_data)
 
 

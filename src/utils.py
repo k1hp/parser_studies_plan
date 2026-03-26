@@ -31,4 +31,4 @@ def print_response(response: ResponseModel) -> None:
     else:
         applogger.debug("\n  Дисциплины не найдены")
 
-applogger = AppLogger().get_logger()
+applogger = AppLogger(level="DEBUG").get_logger()
