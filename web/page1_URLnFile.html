@@ -69,14 +69,14 @@
             async function sendToServer(url, fileData) {
                 const formData = new FormData();
                 
-                formData.append('url', url);
+                // formData.append('url', url);
             
                 if (fileData) {
                     formData.append('file', fileData);
                 }
                 
                 try {
-                    const response = await fetch('http://127.0.0.1:8000/api/compare/json', {
+                    const response = await fetch(`http://127.0.0.1:8001/api/compare/json?url=${url}`, {
                         method: 'POST',
                         body: formData
                     });
