@@ -121,7 +121,7 @@ class XmlParsingService:
         root = self._parse_xml(content)
 
         if root is None:
-            applogger.warning("Не удалось извлечь root из контента (XML/PLX пустой или некорректный).")
+            applogger.warning("Не удалось извлечь root из контента (XML/PLX пустой).")
             return None
 
         direction_code = PlxDataExtractor.extract_direction_code(root)
