@@ -83,7 +83,7 @@ class PlxDataExtractor:
 
 class XmlParsingService:
 
-    def __init__(self, file_manager: FileManager):
+    def __init__(self):
         self._root = None
 
     def _parse_xml(self, content: bytes) -> ET.Element | None:
@@ -141,7 +141,7 @@ if __name__ == "__main__":
     current_script_dir = os.path.dirname(os.path.abspath(__file__))
     folder_path = os.path.abspath(os.path.join(current_script_dir, "..", "directory"))
     file_manager = FileManager(folder_path)
-    extractor = XmlParsingService(file_manager)
+    extractor = XmlParsingService()
     files = file_manager.get_files_in_directory()
     contents = file_manager.get_files_contents(files)
     extracted_items = extractor.extract_all(contents)
