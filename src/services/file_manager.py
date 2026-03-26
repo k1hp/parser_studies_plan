@@ -5,8 +5,6 @@ class FileManager:
 
     def __init__(self, folder_path: str):
         self.directory = folder_path
-        self.file_path = ""
-
 
     def get_files_contents(self, file_paths: list[str]) -> list[bytes]:
         contents = []
@@ -18,16 +16,12 @@ class FileManager:
                 applogger.error(f"Не удалось прочитать файл {file_path}: {e}")
         return contents
 
-    # Функция для получения всех файлов из папки с указанным расширением (пока что из папки directory на уровне выше)
     def get_files_in_directory(self, extension: tuple[str] = (".plx", ".xml")) -> list[str]:
         if not os.path.exists(self.directory):
             applogger.error(f"Ошибка: директории {self.directory} не существует!")
             return []
 
-        if extension is None:
-            extensions = ['.xml', '.plx']
-        else:
-            extensions = [extension]
+        extensions = [extension]
 
         files = []
         for f in os.listdir(self.directory):

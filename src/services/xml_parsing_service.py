@@ -117,18 +117,12 @@ class XmlParsingService:
 
         return results
 
-    def extract_from_content(self, content: bytes) -> ResponseModel:
+    def extract_from_content(self, content: bytes) -> ResponseModel | None:
         root = self._parse_xml(content)
 
         if root is None:
-            applogger.warning(f"root пустой (content пустой), используем пустой ResponseModel")
-            current_year = datetime.now().year
-            return ResponseModel(
-                direction_code="",
-                direction_name="",
-                start_year=current_year,
-                disciplines=[]
-            )
+            applogger.warning("Не удалось извлечь root из контента (XML/PLX пустой или некорректный).")
+            return None
 
         direction_code = PlxDataExtractor.extract_direction_code(root)
         direction_name = PlxDataExtractor.extract_direction_name(root)
