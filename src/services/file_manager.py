@@ -31,7 +31,6 @@ class FileManager:
         applogger.debug(f"Найдено файлов: {len(files)} в директории {self.directory}")
         if files:
             applogger.debug("Список файлов:")
-            for f in files:
-                applogger.debug(f"  - {os.path.basename(f)}")
+            applogger.debug("\n".join(f"- {os.path.basename(f)}" for f in files))
 
         return files
