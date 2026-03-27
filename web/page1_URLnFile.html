@@ -25,7 +25,7 @@
             <div class="outputArea">
                 <p>Результат:</p>
                 <div id="outputContent">
-                    - здесь появиться инфа об отправленных данных -
+                    - здесь появится инфа об отправленных данных -
                 </div>
             </div>      
         </div>
@@ -56,33 +56,73 @@
             });
 
             function showError(message) {
-                outputContent.innerHTML = `<div class="error">Ошибка: ${message}</div>`;
+                outputContent.innerHTML = `<div class="error" style="color: red; padding: 10px; background: #ffeeee; border-radius: 5px; margin: 10px 0;">❌ Ошибка: ${message}</div>`;
             }
             
+            function showSuccess(message) {
+                outputContent.innerHTML = `<div class="success" style="color: green; padding: 10px; background: #eeffee; border-radius: 5px; margin: 10px 0;">✅ ${message}</div>`;
+            }
             
-
+            function showLoading() {
+                outputContent.innerHTML = `<div class="loading" style="color: blue; padding: 10px; background: #eeeeff; border-radius: 5px; margin: 10px 0;">⏳ Отправка данных на сервер...</div>`;
+            }
+            
             function showResult(data) {
                 // Сохраняем результат в localStorage
                 localStorage.setItem('compareResult', JSON.stringify(data));
                 // Перенаправляем на страницу с результатом
                 window.location.href = 'page3_result.html';
             }
+
             // Функция для отправки данных на сервер
             async function sendToServer(url, fileData) {
                 const formData = new FormData();    
-
+                
+                // Добавляем файл в FormData
                 if (fileData) {
                     formData.append('file', fileData);
+                } else {
+                    throw new Error('Файл не выбран');
                 }
                 
+                // Проверяем, что URL указан и не пустой
+                if (!url || url.trim() === '') {
+                    throw new Error('URL не указан');
+                }
+                
+                // Кодируем URL для безопасной передачи в query-параметре
+                const encodedUrl = encodeURIComponent(url.trim());
+                const apiUrl = `http://127.0.0.1:8001/api/compare/json?url=${encodedUrl}`;
+                
+                console.log('Отправка запроса на:', apiUrl);
+                console.log('FormData содержимое:', formData);
+                
                 try {
-                    const response = await fetch(`http://127.0.0.1:8001/api/compare/json?url=${url}`, {
+                    // Используем режим 'cors' с credentials
+                    const response = await fetch(apiUrl, {
                         method: 'POST',
-                        body: formData
+                        body: formData,
+                        mode: 'cors', // явно указываем CORS
+                        credentials: 'omit', // не отправляем куки
+                        headers: {
+                            // Не устанавливаем Content-Type, браузер сам установит с boundary
+                            'Accept': 'application/json'
+                        }
                     });
                     
+                    console.log('Статус ответа:', response.status);
+                    console.log('Заголовки ответа:', response.headers);
+                    
                     if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
+                        let errorMessage = `HTTP ошибка! статус: ${response.status}`;
+                        try {
+                            const errorData = await response.text();
+                            console.error('Тело ошибки:', errorData);
+                            errorMessage += `, детали: ${errorData.substring(0, 200)}`;
+                        } catch (e) {
+                            console.error('Не удалось прочитать тело ошибки:', e);
+                        }
+                        throw new Error(errorMessage);
                     }
                     
                     const result = await response.json();
@@ -90,22 +130,67 @@
                     return result;
                     
                 } catch (error) {
-                    console.error('Ошибка при отправке:', error);
-                    throw error;
+                    console.error('Ошибка при отправке запроса:', error);
+                    
+                    // Детальная диагностика ошибки
+                    let detailedError = error.message;
+                    
+                    if (error.message.includes('Failed to fetch')) {
+                        detailedError = 'Не удалось подключиться к серверу. Проверьте: \n' +
+                                      '1. Запущен ли сервер на http://127.0.0.1:8001\n' +
+                                      '2. Нет ли блокировки CORS (запустите сервер с CORS middleware)\n' +
+                                      '3. Правильный ли порт и адрес\n' +
+                                      `Оригинальная ошибка: ${error.message}`;
+                    } else if (error.message.includes('NetworkError')) {
+                        detailedError = 'Сетевая ошибка. Убедитесь, что сервер доступен по адресу http://127.0.0.1:8001';
+                    }
+                    
+                    throw new Error(detailedError);
                 }
             }
 
             // Обработчик кнопки "Отправить"
             submitBtn.addEventListener('click', async function() {
                 let fileName = file ? file.name : 'Файл не выбран';
-                let currentUrl = urlInput.value.trim() !== '' ? urlInput.value : 'URL не указан';
-                urlValue = urlInput.value;
-
+                let currentUrl = urlInput.value.trim();
+                
+                // Проверяем, что URL указан
+                if (!currentUrl) {
+                    showError('Пожалуйста, укажите URL');
+                    outputContent.innerHTML += `<div>URL: не указан<br>Название файла: ${fileName}</div>`;
+                    return;
+                }
+                
+                // Проверяем, что файл выбран
+                if (!file) {
+                    showError('Пожалуйста, выберите файл');
+                    outputContent.innerHTML += `<div>URL: ${currentUrl}<br>Файл не выбран</div>`;
+                    return;
+                }
+                
+                // Проверяем размер файла (max 50 MB)
+                if (file.size > 50 * 1024 * 1024) {
+                    showError('Файл слишком большой. Максимальный размер 50 МБ');
+                    return;
+                }
+                
+                // Показываем статус загрузки
+                showLoading();
+                
                 try {
-                    
+                    // Отправляем данные на сервер
                     const result = await sendToServer(currentUrl, file);
                     
-                    showResult(result);
+                    // Проверяем, что результат получен
+                    if (result) {
+                        showSuccess('Данные успешно отправлены! Перенаправление...');
+                        // Сохраняем результат и переходим на страницу результата
+                        setTimeout(() => {
+                            showResult(result);
+                        }, 1000);
+                    } else {
+                        throw new Error('Сервер вернул пустой результат');
+                    }
                     
                 } catch (error) {
                     // Отображаем ошибку
@@ -114,16 +199,30 @@
                     // Дополнительная информация в консоль
                     console.error('Детали ошибки:', {
                         url: currentUrl,
-                        file: file ? file.name : null,
-                        error: error
+                        file: file ? { name: file.name, size: file.size, type: file.type } : null,
+                        error: error,
+                        errorStack: error.stack
                     });
+                    
+                    // Добавляем информацию об отправленных данных
+                    outputContent.innerHTML += `
+                        <div style="margin-top: 15px; padding: 10px; background: #f5f5f5; border-radius: 5px;">
+                            <strong>Отправленные данные:</strong><br>
+                            URL: ${currentUrl}<br>
+                            Файл: ${fileName}<br>
+                            Размер файла: ${(file.size / 1024).toFixed(2)} КБ
+                        </div>
+                        <div style="margin-top: 10px; padding: 10px; background: #fff3cd; border-radius: 5px;">
+                            <strong>💡 Советы по устранению проблемы:</strong><br>
+                            1. Убедитесь, что сервер запущен: <code>python entypoint.py</code><br>
+                            2. Проверьте, что сервер слушает порт 8001<br>
+                            3. Добавьте CORS middleware в FastAPI приложение:<br>
+                            <code>from fastapi.middleware.cors import CORSMiddleware</code><br>
+                            <code>app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])</code><br>
+                            4. Проверьте, что URL корректен и доступен
+                        </div>
+                    `;
                 }
-            
-                
-                const outputText = `URL: ${currentUrl}\nНазвание файла: ${fileName}`;
-                outputContent.innerText = outputText;
-                
-                console.log('Отправлено -> URL:', currentUrl, '| Файл:', fileName);
             });
         </script>
     </body>
