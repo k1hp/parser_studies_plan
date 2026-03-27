@@ -1,6 +1,8 @@
+from enum import Enum
 from typing import List, Literal
 
 from fastapi import FastAPI, UploadFile, File, Depends, APIRouter
+from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
 from src.dependencies import get_analyze_service
@@ -8,6 +10,16 @@ from src.services.analyze_service import AnalyzeService
 from src.utils import applogger
 
 app = FastAPI()
+
+# Добавляем CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 router = APIRouter(prefix="/api")
 
 REPORT_FORMATS = Literal["json", "html", "pdf"]
