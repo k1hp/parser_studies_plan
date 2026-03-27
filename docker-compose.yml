@@ -16,13 +16,13 @@ services:
       retries: 3
 
 
-  fastapi-service:
+  fastapi-service-analyze:
     build:
       context: ./backend
       dockerfile: ./Dockerfile
-    container_name: fastapi-service-parser
+    container_name: fastapi-service-analyze
     ports:
-      - "127.0.0.1:8000:8000"
+      - "8000:8000"
 #    env_file:
 #      - .env
     networks:
