@@ -3,9 +3,9 @@ from typing import List, Literal
 from fastapi import FastAPI, UploadFile, File, Depends, APIRouter
 import uvicorn
 
-from backend.src.dependencies import get_analyze_service
-from backend.src.services.analyze_service import AnalyzeService
-from backend.src.utils import applogger
+from src.dependencies import get_analyze_service
+from src.services.analyze_service import AnalyzeService
+from src.utils import applogger
 
 app = FastAPI()
 router = APIRouter(prefix="/api")

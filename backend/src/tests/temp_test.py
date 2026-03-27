@@ -8,6 +8,6 @@ def test_temp():
     """Заведомо рабочий"""
     assert True
 
-def test_wrong():
-    """Заведомо падает"""
-    assert False
+# def test_wrong():
+#     """Заведомо падает"""
+#     assert False

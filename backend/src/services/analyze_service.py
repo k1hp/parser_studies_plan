@@ -1,8 +1,8 @@
-from backend.src.schemas.response_schemas import ApiResponseSchema
-from backend.src.schemas.web_schemas import CurriculumModel
-from backend.src.schemas.xml_schemas import DisciplineDetail, ResponseModel
-from backend.src.services.xml_parsing_service import WebParsingService, XmlParsingService
-from backend.src.utils import applogger
+from src.schemas.response_schemas import ApiResponseSchema
+from src.schemas.web_schemas import CurriculumModel
+from src.schemas.xml_schemas import DisciplineDetail, ResponseModel
+from src.services.xml_parsing_service import WebParsingService, XmlParsingService
+from src.utils import applogger
 
 
 class AnalyzeService:

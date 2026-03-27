@@ -18,8 +18,8 @@ services:
 
   fastapi-service:
     build:
-      context: .
-      dockerfile: backend/Dockerfile
+      context: ./backend
+      dockerfile: ./Dockerfile
     container_name: fastapi-service-parser
     ports:
       - "127.0.0.1:8000:8000"
@@ -28,7 +28,7 @@ services:
     networks:
       - server-network
     volumes:
-      - ./backend/src:/fastapi-service/backend/src  # для горячей перезагрузки при разработке
+      - ./backend/src:/fastapi-service/src  # для горячей перезагрузки при разработке
     depends_on:
       web-server:
         condition: service_healthy

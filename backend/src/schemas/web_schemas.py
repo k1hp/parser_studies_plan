@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 
-from backend.src.schemas.xml_schemas import DisciplineDetail
+from src.schemas.xml_schemas import DisciplineDetail
 
 
 class CurriculumModel(BaseModel):
