@@ -1,8 +1,18 @@
+image: docker:24.0.5 # Рекомендуется использовать конкретную версию
+
+services:
+  - docker:24.0.5-dind
+
+variables:
+  DOCKER_TLS_CERTDIR: "/certs"
+
 
 stages:          # List of stages for jobs, and their order of execution
   - build
   - test
   - deploy
+
+
 
 build-job:       # This job runs in the build stage, which runs first.
   stage: build
