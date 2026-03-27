@@ -2,11 +2,11 @@ from datetime import datetime
 import os
 import xml.etree.ElementTree as ET
 import re
-from src.utils import applogger
-from src.schemas.xml_schemas import ResponseModel, DisciplineDetail
-from src.schemas.web_schemas import CurriculumModel
+from backend.src.utils import applogger
+from backend.src.schemas.xml_schemas import ResponseModel, DisciplineDetail
+from backend.src.schemas.web_schemas import CurriculumModel
 # from src.models.response_model_xml_parser import ResponseModel, DisciplineDetail
-from src.services.file_manager import FileManager
+from backend.src.services.file_manager import FileManager
 
 class PlxDataExtractor:
 

@@ -1,5 +1,5 @@
 from loguru import logger
-from models.response_model_xml_parser import ResponseModel
+from backend.src.models.response_model_xml_parser import ResponseModel
 import sys
 
 class AppLogger:
