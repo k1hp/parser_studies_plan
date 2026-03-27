@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+   <title>Отчет о расхождениях</title>
+</head>
+<body>
+    <h1>Отчет о несоответствиях в учебном плане</h1>
+
+    <div class="summary">
+        Дата формирования: {{ now }} <br>
+        Количество найденных расхождений: {{ errors|length }}
+    </div>
+
+    {% if errors %}
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Описание несоответствия (Дисциплина/Код)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for error in errors %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td class="error-text">{{ error }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="no-errors">
+        Расхождений не обнаружено. Данные полностью соответствуют эталону.
+    </div>
+    {% endif %}
+</body>
+</html>

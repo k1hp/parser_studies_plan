@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: DejaVu Sans, sans-serif; }
+        h1 { color: #2c3e50; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #ddd; padding: 8px; }
+    </style>
+</head>
+<body>
+    <h1>Отчет по направлению: {{ direction_name }}</h1>
+    <p>Код: {{ direction_code }} | Год: {{ start_year }}</p>
+
+    <table>
+        <tr>
+            <th>Дисциплина</th>
+            <th>Код</th>
+        </tr>
+        {% for discipline in disciplines %}
+        <tr>
+            <td>{{ discipline.name }}</td>
+            <td>{{ discipline.code }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>

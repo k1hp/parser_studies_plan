@@ -1,14 +1,17 @@
 from backend.src.schemas.response_schemas import ApiResponseSchema
 from backend.src.schemas.web_schemas import CurriculumModel
 from backend.src.schemas.xml_schemas import DisciplineDetail, ResponseModel
+from backend.src.services.pdf_service import PDFService
 from backend.src.services.xml_parsing_service import WebParsingService, XmlParsingService
 from backend.src.utils import applogger
 
 
 class AnalyzeService:
-    def __init__(self, web_parser_service: WebParsingService, xml_parser_service: XmlParsingService):
+    def __init__(self, web_parser_service: WebParsingService, xml_parser_service: XmlParsingService, pdf_service: PDFService):
         self.web_parser_service = web_parser_service
         self.xml_parser_service = xml_parser_service
+        self.pdf_service = pdf_service
+
     # 1. общая функция анализа
     def _compare_models(self, web_object: CurriculumModel, xml_object: ResponseModel) -> ApiResponseSchema:
         result: dict = {}
@@ -41,7 +44,7 @@ class AnalyzeService:
     #     web_data = self.extract_from_content(files[0])
         # xml_data = self.xml_parser_service.extract_all_files(files)
 
-    def _compare_lists(self, correct_list: list[DisciplineDetail], checking_list: list[DisciplineDetail]) -> list[str] | list:
+    def _compare_lists(self, correct_list: list[DisciplineDetail], checking_list: list[DisciplineDetail]) -> dict:
         result_list: list[str] = []
         for correct, check in zip(correct_list, checking_list):
             if correct.discipline_code != check.discipline_code:
@@ -49,10 +52,15 @@ class AnalyzeService:
             if correct.discipline_name not in "".join(el.to_string for el in checking_list):
                 result_list.append(correct.to_string)
 
-        return result_list
+        pdf_content = self.pdf_service.create_pdf(result_list)
+
+        return {
+            "text_results": result_list,
+            "pdf_content": pdf_content
+        }
 
 if __name__ == "__main__":
-    service = AnalyzeService(WebParsingService(), XmlParsingService())
+    service = AnalyzeService(WebParsingService(), XmlParsingService(), PDFService())
 
     xml = [DisciplineDetail(discipline_name="name1", discipline_code=str(i)) for i in range(10)]
     ls3 = [DisciplineDetail(discipline_name="name_MM", discipline_code=str(i)) for i in range(10)]
