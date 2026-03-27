@@ -27,8 +27,8 @@ services:
 #      - .env
     networks:
       - server-network
-    volumes:
-      - ./backend/src:/fastapi-service/src  # для горячей перезагрузки при разработке
+#    volumes:
+#      - ./backend/src:/fastapi-service/src  # для горячей перезагрузки при разработке
     depends_on:
       web-server:
         condition: service_healthy
