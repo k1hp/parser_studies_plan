@@ -1,35 +1,42 @@
-image: docker:24.0.5 # Рекомендуется использовать конкретную версию
+# image: docker:24.0.5 # Рекомендуется использовать конкретную версию
 
-services:
-  - docker:24.0.5-dind
+# services:
+#   - docker:24.0.5-dind
 
 #variables:
 #  DOCKER_TLS_CERTDIR: "/certs"
 
 
 stages:          # List of stages for jobs, and their order of execution
-  - build
+  # - build
   - test
   - deploy
 
 
 
-build-job:       # This job runs in the build stage, which runs first.
-  stage: build
-  script:
-    - echo "Compiling the code..."
-    - docker build -t "analyze-service-test-build" ./backend/
-    - echo "Compile complete."
+# build-job:       # This job runs in the build stage, which runs first.
+#   stage: build
+#   tags:
+#     - 
+#   script:
+#     - echo "Compiling the code..."
+#     - docker build -t "analyze-service-test-build" ./backend/
+#     - echo "Compile complete."
 
 unit-test-job:   # This job runs in the test stage.
   stage: test    # It only starts when the job in the build stage completes successfully.
+  tags:
+    - serverochek
   script:
     - echo "Running unit tests... This will take time."
     - docker build -t "analyze-service-test-build" ./backend/
     - docker run --rm analyze-service-test-build uv run pytest -s -v
 
 deploy-job:      # This job runs in the deploy stage.
-  stage: deploy  # It only runs when *both* jobs in the test stage complete successfully.
-#  environment: production
+  stage: deploy  # It only runs when *both* jobs in the test stage complete   
+  tags: 
+    - shell-runner
   script:
-    - docker compose up --build -d
+  - docker compose down --remove-orphans
+  - docker compose up -d --build --force-recreate
+  - docker image prune -f
