@@ -43,6 +43,6 @@ def analyze_many(report_format: REPORT_FORMATS, files: List[UploadFile]):
 
 app.include_router(router)
 
-if __name__ == "__main__":
-
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+# if __name__ == "__main__":
+#
+#     uvicorn.run(app, host="0.0.0.0", port=8000)

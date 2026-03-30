@@ -92,7 +92,7 @@
                 
                 // Кодируем URL для безопасной передачи в query-параметре
                 const encodedUrl = encodeURIComponent(url.trim());
-                const apiUrl = `http://127.0.0.1:8001/api/compare/json?url=${encodedUrl}`;
+                const apiUrl = `http://127.0.0.1:8000/api/compare/json?url=${encodedUrl}`;
                 
                 console.log('Отправка запроса на:', apiUrl);
                 console.log('FormData содержимое:', formData);
