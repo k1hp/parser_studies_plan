@@ -1,9 +1,9 @@
-from backend.src.schemas.response_schemas import ApiResponseSchema
-from backend.src.schemas.web_schemas import CurriculumModel
-from backend.src.schemas.xml_schemas import DisciplineDetail, ResponseModel
-from backend.src.services.xml_parsing_service import XmlParsingService
-from backend.src.services.web_parsing_service import WebParsingService
-from backend.src.utils import applogger
+from src.schemas.response_schemas import ApiResponseSchema
+from src.schemas.web_schemas import CurriculumModel
+from src.schemas.xml_schemas import DisciplineDetail, ResponseModel
+from src.services.xml_parsing_service import XmlParsingService
+from src.services.web_parsing_service import WebParsingService
+from src.utils import applogger
 
 
 class AnalyzeService:
@@ -15,16 +15,18 @@ class AnalyzeService:
         result: dict = {}
 
         for key, value in web_object.model_dump().items():
-            if key == "speciality" and value == xml_object.direction_name:
+            # if key == "speciality" and value == xml_object.direction_name:
+            #     result[key] = value
+            if key == "discipline_code" and value == xml_object.direction_code:
                 result[key] = value
-            elif key == "discipline_code" and value == xml_object.direction_code:
-                result[key] = value
-            elif isinstance(value, list) and len(value) > 0 and isinstance(value[0], DisciplineDetail):
-                result[key] = self._compare_lists(xml_object.disciplines, value)
+            elif isinstance(value, list) and len(value) > 0 and isinstance(value[0], dict):
+                applogger.debug(f"type {type(value)} and {type(value[0])}")
+                result[key] = self._compare_lists(xml_object.disciplines, [DisciplineDetail(**el) for el in value])
 
             else:
                 result[key] = value
                 # raise ValueError(f"Unexpected value {value} of {key}")
+            applogger.debug(f"result {result}")
         return ApiResponseSchema.model_validate(result)
 
     # 2. анализ одной и получение нужного года
@@ -33,9 +35,11 @@ class AnalyzeService:
         applogger.debug("web data", web_data)
         xml_data = self.xml_parser_service.extract_from_content(content)
 
+        applogger.debug(f"lenght {len(web_data)}")
         web_model = None
         for model in web_data:
-            if xml_data.start_year == model.curriculum_year:
+            applogger.debug(f"model group {model.specialty}")
+            if xml_data.start_year == int(model.curriculum_year):
                 web_model = model
                 break
         if web_model is None:
@@ -51,13 +55,18 @@ class AnalyzeService:
     #     web_data = self.extract_from_content(files[0])
         # xml_data = self.xml_parser_service.extract_all_files(files)
 
-    def _compare_lists(self, correct_list: list[DisciplineDetail], checking_list: list[DisciplineDetail]) -> list[str] | list:
+    def _compare_lists(self, correct_list: list[DisciplineDetail], checking_list: list[DisciplineDetail]) -> list[DisciplineDetail] | list:
         result_list: list[str] = []
-        for correct, check in zip(correct_list, checking_list):
-            if correct.discipline_code != check.discipline_code:
-                result_list.append(correct.to_string)
-            if correct.discipline_name not in "".join(el.to_string for el in checking_list):
-                result_list.append(correct.to_string)
+        for check in checking_list:
+            flag = False
+            for correct in correct_list:
+                if correct.discipline_code == check.discipline_code:
+                    flag = True
+
+            if not flag:
+                result_list.append(correct)
+            # if correct.discipline_name not in "".join(el.to_string for el in checking_list):
+            #     result_list.append(correct.to_string)
 
         return result_list
 

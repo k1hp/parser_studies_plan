@@ -1,6 +1,6 @@
 import logging
 from typing import List, Dict, Any
-from backend.src.schemas.web_schemas import CurriculumModel, DisciplineDetail
+from src.schemas.web_schemas import CurriculumModel, DisciplineDetail
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

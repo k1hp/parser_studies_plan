@@ -4,9 +4,10 @@ import os
 import requests
 from bs4 import BeautifulSoup
 import logging
-from backend.src.schemas.web_schemas import CurriculumModel, DisciplineDetail
-from bs4.element import Tag 
-from backend.src.logger import print_results_as_logging
+from bs4.element import Tag
+
+from src.schemas.web_schemas import CurriculumModel
+from src.logger import print_results_as_logging
 
 # from ...schemas.web_schemas import CurriculumModel, DisciplineDetail
 
@@ -18,7 +19,7 @@ class WebParsingService:
 
     def __init__(self, curriculum_file: str = "plan.xml"):
         self.curriculum_file = curriculum_file
-        self.url: str | None = None  # грустно
+        self.url: str = "https://mauniver.ru/sveden/education/op/43292#prak"  # грустно
 
     def parse_by_year(self) -> List[Dict[str, Any]]:
       logger.info("Start parsing URL %s", self.url)

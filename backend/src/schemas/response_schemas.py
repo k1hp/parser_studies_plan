@@ -1,4 +1,4 @@
-from backend.src.schemas.web_schemas import CurriculumModel
+from src.schemas.web_schemas import CurriculumModel
 
 
 class ApiResponseSchema(CurriculumModel):

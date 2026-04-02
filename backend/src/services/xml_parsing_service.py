@@ -2,11 +2,13 @@ from datetime import datetime
 import os
 import xml.etree.ElementTree as ET
 import re
-from backend.src.utils import applogger
-from backend.src.schemas.xml_schemas import ResponseModel, DisciplineDetail
-from backend.src.schemas.web_schemas import CurriculumModel
+from pathlib import Path
+
+from src.utils import applogger
+from src.schemas.xml_schemas import ResponseModel, DisciplineDetail
+from src.schemas.web_schemas import CurriculumModel
 # from src.models.response_model_xml_parser import ResponseModel, DisciplineDetail
-from backend.src.services.file_manager import FileManager
+from src.services.file_manager import FileManager
 
 class PlxDataExtractor:
 
@@ -196,7 +198,8 @@ class WebParsingService:
 
 if __name__ == "__main__":
     current_script_dir = os.path.dirname(os.path.abspath(__file__))
-    folder_path = os.path.abspath(os.path.join(current_script_dir, "..", "directory"))
+    # folder_path = os.path.abspath(os.path.join(current_script_dir, "..", "directory"))
+    folder_path = str(Path.home() / "Downloads")
     file_manager = FileManager(folder_path)
     extractor = XmlParsingService()
     files = file_manager.get_files_in_directory()
