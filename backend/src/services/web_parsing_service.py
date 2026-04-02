@@ -1,37 +1,17 @@
 from typing import List, Dict, Any
 import re
+import os
 import requests
 from bs4 import BeautifulSoup
 import logging
-from pydantic import BaseModel, Field
+from backend.src.schemas.web_schemas import CurriculumModel, DisciplineDetail
+from bs4.element import Tag 
+from backend.src.logger import print_results_as_logging
+
+# from ...schemas.web_schemas import CurriculumModel, DisciplineDetail
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
-
-
-class DisciplineDetail(BaseModel):
-    discipline_name: str = Field(..., description="Название дисциплины")
-    discipline_code: str = Field(..., description="Код дисциплины (ДисциплинаКод)")
-
-
-class CurriculumModel(BaseModel):
-    specialty: str = Field(..., description="Название специальности")
-    discipline_code: str = Field(..., description="Код дисциплины")
-    curriculum_year: str = Field(..., description="Год набора")
-    education_program: bool = Field(..., description="Наличие раздела 'Образовательная программа'")
-    lvl_education: str = Field(..., description="Уровень образования")
-    form_education: str = Field(..., description="Форма обучения")
-    calendar_graphic: bool = Field(..., description="Наличие календарного учебного графика")
-    education_plan: bool = Field(..., description="Наличие учебного плана")
-    
-    working_programs: list[DisciplineDetail] = Field(default=[], description="Список рабочих программ дисциплин")
-    fos_materials: list[DisciplineDetail] = Field(default=[], description="Список ФОС материалов")
-    practic_programs: list[str] = Field(default=[], description="Список программ практик")
-    methodical_materials: list[DisciplineDetail] = Field(default=[], description="Список методических материалов")
-
-    gia_program: bool = Field(..., description="Наличие раздела 'ГИА'")
-    education_program_vosp: bool = Field(..., description="Наличие раздела 'Рабочая программа воспитания'")
-    curriculum_plan: bool = Field(..., description="Наличие Календарного плана воспитательной работы")
 
 
 class WebParsingService:
@@ -42,9 +22,26 @@ class WebParsingService:
 
     def parse_by_year(self) -> List[Dict[str, Any]]:
       logger.info("Start parsing URL %s", self.url)
-      response = requests.get(self.url)
-      response.raise_for_status()
-
+        
+        # Добавляем заголовки и отключаем проверку SSL
+      headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+        
+      try:
+            response = requests.get(self.url, verify=False, timeout=30, headers=headers)
+            response.raise_for_status()
+      except requests.exceptions.SSLError as e:
+            logger.error(f"SSL error: {e}")
+            logger.info("Trying without SSL verification...")
+            # Повторная попытка с verify=False уже сделана выше
+            return []
+      except Exception as e:
+            logger.error(f"Request error: {e}")
+            return []
+        
+      soup = BeautifulSoup(response.text, "html.parser")
+        # ... остальной код без изменений
       soup = BeautifulSoup(response.text, "html.parser")
       logger.info("Page loaded, length=%s", len(response.text))
 
@@ -128,7 +125,7 @@ class WebParsingService:
                             logger.info(f"      Added practic: {text[:50]}")
                     else:
                         # Сначала пробуем новый улучшенный метод
-                        disc_code, disc_name = self._extract_discipline_code_and_name(text)
+                        disc_code, disc_name = self.extract_discipline_code_and_name(text)
                         
                         # Если код не найден, используем старый метод как fallback
                         if not disc_code or disc_code == text or disc_code.startswith('UNKNOWN'):
@@ -229,7 +226,7 @@ class WebParsingService:
                       len(result['methodical_materials']))
       return results
     
-    def _extract_discipline_code_and_name(self, text: str) -> tuple[str, str]:
+    def extract_discipline_code_and_name(self, text: str) -> tuple[str, str]:
         """
         Извлекает код дисциплины и название из текста.
         Возвращает (code, name)
@@ -294,41 +291,4 @@ class WebParsingService:
 if __name__ == "__main__":
     service = WebParsingService("https://mauniver.ru/sveden/education/op/55217#prak")
     results = service.parse_by_year()
-    
-    for result in results:
-        print(f"\nГод набора: {result['curriculum_year']}")
-        print(f"Специальность: {result['specialty']}")
-        print(f"Код: {result['discipline_code']}")
-        print(f"Уровень образования: {result['lvl_education']}")
-        print(f"Форма обучения: {result['form_education']}")
-        print(f"Наличие разделов:")
-        print(f"  - Образовательная программа: {result['education_program']}")
-        print(f"  - Календарный график: {result['calendar_graphic']}")
-        print(f"  - Учебный план: {result['education_plan']}")
-        print(f"  - ГИА: {result['gia_program']}")
-        print(f"  - Рабочая программа воспитания: {result['education_program_vosp']}")
-        print(f"  - Календарный план воспитательной работы: {result['curriculum_plan']}")
-        
-        print(f"\nРабочих программ: {len(result['working_programs'])}")
-        if result['working_programs']:
-            print("  Примеры:")
-            for prog in result['working_programs'][:5]:
-                print(f"    - {prog['discipline_code']}: {prog['discipline_name']}")
-        
-        print(f"\nФОС материалов: {len(result['fos_materials'])}")
-        if result['fos_materials']:
-            print("  Примеры:")
-            for fos in result['fos_materials'][:3]:
-                print(f"    - {fos['discipline_code']}: {fos['discipline_name']}")
-        
-        print(f"\nПрактик: {len(result['practic_programs'])}")
-        if result['practic_programs']:
-            print("  Примеры:")
-            for p in result['practic_programs'][:3]:
-                print(f"    - {p}")
-        
-        print(f"\nМетодических материалов: {len(result['methodical_materials'])}")
-        if result['methodical_materials']:
-            print("  Примеры:")
-            for mm in result['methodical_materials'][:3]:
-                print(f"    - {mm['discipline_code']}: {mm['discipline_name']}")
+    print_results_as_logging(results)

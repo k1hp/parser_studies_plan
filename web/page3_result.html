@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Результат сравнения</title>
+        <link rel="stylesheet" href="css/global.css">
+        <style>
+            .result{
+                padding: 15px;
+            }
+            .dropdown{
+                display: none;
+            }
+            .dropdown a{
+                display: block;
+            }
+            .info{
+                margin: 15px;
+            }
+            .show{
+                display: block;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="content">
+            <header>
+                <h1>Информационные блоки</h1>
+            </header>
+            <div class="result" id="result">
+                <!--<button class="submitBtn" onclick="toggleDropdown()">Результат</button>
+                <div class="dropdown" id="dropdown"></div>-->
+            </div>
+            
+        </div>
+        <script>
+            
+            const info = [
+                "Первая строка",
+                "Вторая строка",
+                "Третья строка",
+                "dsada",
+                "dsad"
+            ]
+
+            const result = document.getElementById('result');
+            let html = '';
+            for(let i = 1; i <= info.length; i++){
+                html += `<button class="submitBtn" onclick="toggleInfo(${i})">Результат ${i}</button>
+                         <div class="dropdown" id="info${i}">
+                         <p class = "info" id = info${i}>${info[i - 1]}<p>   
+                         </div>`
+            }
+            result.innerHTML = html;
+            
+
+            function toggleInfo(id){
+                document.getElementById(`info${id}`).classList.toggle("show");
+            }
+        </script>
+    </body>
+</html>

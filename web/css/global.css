@@ -1,0 +1,44 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+body{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+header{
+    padding: 15px;
+    border-bottom: 1px solid #cccccc;
+}
+header h1{
+    font-size: 25pt;
+}
+p, input{
+    font-size: 15pt;
+}
+.content{
+    margin-top: 100px;
+    width: 780px;
+    background: rgba(255,255,255,0.96);
+    border-radius: 40px;
+    border: 1px solid rgba(134, 134, 134, 0.5);
+    font-family: monospace;
+}
+
+.conteiner{
+    padding: 15px;
+}
+.clearUrlBtn{
+    padding: 5px;
+}
+.submitBtn{
+    display: block;
+    padding: 5px;
+    font-size: 20pt;
+}
+.outputArea{
+    font-size: 15pt;
+    padding: 15px;
+}

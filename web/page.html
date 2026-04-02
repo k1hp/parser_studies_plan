@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Сравнивание файлов и данных</title>
+        <style>
+            * {
+                margin: 0;
+                padding: 0;
+                box-sizing: border-box;
+            }
+            body{
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            header{
+                padding: 15px;
+                border-bottom: 1px solid #cccccc;
+            }
+            header h1{
+                font-size: 25pt;
+            }
+            p, input{
+                font-size: 15pt;
+            }
+            .content{
+                margin-top: 100px;
+                width: 780px;
+                background: rgba(255,255,255,0.96);
+                border-radius: 40px;
+                border: 1px solid rgba(134, 134, 134, 0.5);
+            }
+            .file, .url{
+                padding: 15px;
+            }
+            .clearUrlBtn{
+                padding: 5px;
+            }
+            .submitBtn{
+                padding: 5px;
+                font-size: 20pt;
+            }
+            .outputArea{
+                font-size: 15pt;
+                padding: 15px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="content">
+            <header>
+                <h1>Загрузите данные</h1>
+                <p>Вставьте файлы с учебным планом и ссылку страницы с данными</p>
+            </header>
+            <div class="file">
+                <p>Поддерживаются любые форматы (max. 50 МБ)</p>
+                <input type="file" id="fileInput" accept="*/*">
+            </div>
+            <div class="url">
+                <input type="text" id="urlInput" placeholder="https://example.com или любой адрес" autocomplete="off">
+                <button class="clearUrlBtn" id="clearUrlBtn">X Очистить</button>
+            </div>
+            <div class="file">
+                <button class="submitBtn" id="submitBtn">Отправить</button>
+            </div>
+            <div class="outputArea">
+                <p>Результат:</p>
+                <div id="outputContent">
+                    - здесь появиться инфа об отправленных данных -
+                </div>
+            </div>  
+        
+            
+        </div>
+        <script>
+            let file = null;
+            let urlValue = "";
+
+            const fileInput = document.getElementById('fileInput');  
+            const urlInput = document.getElementById('urlInput');    
+            const clearUrlBtn = document.getElementById('clearUrlBtn');
+            const submitBtn = document.getElementById('submitBtn');
+            const outputContent = document.getElementById('outputContent');
+
+            fileInput.addEventListener('change', function(event) {
+                file = event.target.files[0];
+                console.log('Файл изменен:', file ? file.name : 'удален');
+            });
+
+            urlInput.addEventListener('input', function(event) {
+                urlValue = event.target.value; 
+                console.log('URL изменен:', urlValue);
+            });
+
+            clearUrlBtn.addEventListener('click', function() {
+                urlInput.value = '';     
+                urlValue = '';           
+                console.log('URL очищен');
+            });
+
+            // Обработчик кнопки "Отправить"
+            submitBtn.addEventListener('click', function() {
+                let fileName = file ? file.name : 'Файл не выбран';
+                let currentUrl = urlInput.value.trim() !== '' ? urlInput.value : 'URL не указан';
+                urlValue = urlInput.value;
+                
+                const outputText = `URL: ${currentUrl}\nНазвание файла: ${fileName}`;
+                outputContent.innerText = outputText;
+                
+                console.log('Отправлено -> URL:', currentUrl, '| Файл:', fileName);
+            });
+        </script>
+    </body>
+</html>
