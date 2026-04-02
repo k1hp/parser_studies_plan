@@ -2,11 +2,15 @@ from datetime import datetime
 import os
 import xml.etree.ElementTree as ET
 import re
+
+from sentry_sdk.utils import capture_internal_exception
+
 from backend.src.utils import applogger
 from backend.src.schemas.xml_schemas import ResponseModel, DisciplineDetail
 from backend.src.schemas.web_schemas import CurriculumModel
 # from src.models.response_model_xml_parser import ResponseModel, DisciplineDetail
 from backend.src.services.file_manager import FileManager
+from backend.src.services.pdf_service import PDFService
 
 class PlxDataExtractor:
 
@@ -89,7 +93,8 @@ class PlxDataExtractor:
 
 class XmlParsingService:
 
-    def __init__(self):
+    def __init__(self, pdf_service: PDFService):
+        self._pdf_service = pdf_service
         self._root = None
 
     def _parse_xml(self, content: bytes) -> ET.Element | None:
@@ -195,19 +200,36 @@ class WebParsingService:
 
 
 if __name__ == "__main__":
+    pdf_service = PDFService(template_dir="templates")
     current_script_dir = os.path.dirname(os.path.abspath(__file__))
     folder_path = os.path.abspath(os.path.join(current_script_dir, "..", "directory"))
     file_manager = FileManager(folder_path)
-    extractor = XmlParsingService()
+    extractor = XmlParsingService(pdf_service=pdf_service)
     files = file_manager.get_files_in_directory()
     contents = file_manager.get_files_contents(files)
     extracted_items = extractor.extract_all(contents)
 
-    if extracted_items:
-        for response in extracted_items:
+    if files:
+        for file_path in files:
+            content = file_manager.get_files_contents([file_path])[0]
 
-            applogger.debug("\nJSON представление:")
-            applogger.debug(response.model_dump_json(indent=2, ensure_ascii=False))
+            response = extractor.extract_from_content(content)
+
+            if response:
+                base_name = os.path.splitext(os.path.basename(file_path))[0]
+
+                pdf_file_name = f"report_{base_name}.pdf"
+
+                pdf_bytes = pdf_service.create_pdf(response)
+                with open(pdf_file_name, "wb") as f:
+                    f.write(pdf_bytes)
+
+                applogger.info(f"PDF сохранен: {pdf_file_name} (из файла {file_path})")
+
+            #applogger.debug("\nJSON представление:")
+            #applogger.debug(response.model_dump_json(indent=2, ensure_ascii=False))
+
+        #pdf_content = pdf_service.create_pdf(extracted_items)
 
     else:
         applogger.info(f"Файлы не найдены в директории: {folder_path}")

@@ -26,8 +26,8 @@ async def analyze(url: str, report_format: REPORT_FORMATS, file: UploadFile = Fi
     if report_format == "json":
         return response
     elif report_format == "pdf":
-        pdf_service = PDFService()
         # передаешь response в твой конвертер pdf и потом возвращаешь сюда файл
+        pdf_service = PDFService()
         pdf_content = pdf_service.create_pdf(response)
         return pdf_content
 

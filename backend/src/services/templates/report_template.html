@@ -2,6 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8">
+    <title>Отчет по учебному плану</title>
     <style>
         body { font-family: DejaVu Sans, sans-serif; }
         h1 { color: #2c3e50; }
@@ -10,24 +11,152 @@
     </style>
 </head>
 <body>
-    <h1>Отчет по направлению: {{ specialty }}</h1>
-    <p>Форма обучения: {{ form_education }} | Год: {{ curriculum_year }}</p>
+    <h1>Отчет по учебному плану</h1>
 
+    <div class="info-block">
+        <h2>Основная информация</h2>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-label">Специальность:</span>
+                <span class="info-value">{{ specialty or '-' }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Код дисциплины:</span>
+                <span class="info-value">{{ discipline_code or '-' }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Год набора:</span>
+                <span class="info-value">{{ curriculum_year or '-' }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Уровень образования:</span>
+                <span class="info-value">{{ lvl_education or '-' }}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Форма обучения:</span>
+                <span class="info-value">{{ form_education or '-' }}</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="info-block">
+        <h2>Наличие разделов в учебном плане</h2>
+        <div class="info-grid">
+            <div class="info-item">
+                <span class="info-label">Образовательная программа:</span>
+                <span class="status-badge {{ 'status-true' if education_program else 'status-false' }}">
+                    {{ 'Есть' if education_program else 'Нет' }}
+                </span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Календарный учебный график:</span>
+                <span class="status-badge {{ 'status-true' if calendar_graphic else 'status-false' }}">
+                    {{ 'Есть' if calendar_graphic else 'Нет' }}
+                </span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Учебный план:</span>
+                <span class="status-badge {{ 'status-true' if education_plan else 'status-false' }}">
+                    {{ 'Есть' if education_plan else 'Нет' }}
+                </span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">ГИА:</span>
+                <span class="status-badge {{ 'status-true' if gia_program else 'status-false' }}">
+                    {{ 'Есть' if gia_program else 'Нет' }}
+                </span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Рабочая программа воспитания:</span>
+                <span class="status-badge {{ 'status-true' if education_program_vosp else 'status-false' }}">
+                    {{ 'Есть' if education_program_vosp else 'Нет' }}
+                </span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Календарный план воспитательной работы:</span>
+                <span class="status-badge {{ 'status-true' if curriculum_plan else 'status-false' }}">
+                    {{ 'Есть' if curriculum_plan else 'Нет' }}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    {% if working_programs %}
+    <h2>Рабочие программы дисциплин</h2>
     <table>
-    <thead>
-        <tr>
-            <th>Код</th>
-            <th>Название дисциплины</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for disc in disciplines %}
-        <tr>
-            <td>{{ disc.discipline_code or '-' }}</td>
-            <td>{{ disc.discipline_name }}</td>
-        </tr>
+        <thead>
+            <tr>
+                <th>Код дисциплины</th>
+                <th>Название дисциплины</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for program in working_programs %}
+            <tr>
+                <td>{{ program.discipline_code or '-' }}</td>
+                <td>{{ program.discipline_name }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="error-message">Нет данных о рабочих программах дисциплин</div>
+    {% endif %}
+
+    {% if fos_materials %}
+    <h2>ФОС материалы</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Код дисциплины</th>
+                <th>Название дисциплины</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for material in fos_materials %}
+            <tr>
+                <td>{{ material.discipline_code or '-' }}</td>
+                <td>{{ material.discipline_name }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="error-message">Нет данных о ФОС материалах</div>
+    {% endif %}
+
+    {% if methodical_materials %}
+    <h2>Методические материалы</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Код дисциплины</th>
+                <th>Название дисциплины</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for material in methodical_materials %}
+            <tr>
+                <td>{{ material.discipline_code or '-' }}</td>
+                <td>{{ material.discipline_name }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    {% if practic_programs %}
+    <h2>Программы практик</h2>
+    <ul>
+        {% for program in practic_programs %}
+        <li>{{ program }}</li>
         {% endfor %}
-    </tbody>
-</table>
+    </ul>
+    {% endif %}
+
+    <div class="footer">
+        <p>Отчет создан автоматически {{ current_date if current_date else 'в текущую дату' }}</p>
+        <p>Система проверки учебных планов</p>
+    </div>
 </body>
 </html>

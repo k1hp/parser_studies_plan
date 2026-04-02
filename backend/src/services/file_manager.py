@@ -1,5 +1,6 @@
 import os
 from backend.src.utils import applogger
+#from smbclient import open_file
 
 class FileManager:
 
@@ -9,12 +10,15 @@ class FileManager:
     def get_files_contents(self, file_paths: list[str]) -> list[bytes]:
         contents = []
         for file_path in file_paths:
-            try:
-                with open(file_path, 'rb') as f:
-                    contents.append(f.read())
-            except Exception as e:
-                applogger.error(f"Не удалось прочитать файл {file_path}: {e}")
+            contents.append(self.get_one_content(file_path))
         return contents
+
+    def get_one_content(self, file_path: str) -> bytes:
+        try:
+            with open(file_path, 'rb') as f:
+                return f.read()
+        except Exception as e:
+            applogger.error(f"Не удалось прочитать файл {file_path}: {e}")
 
     def get_files_in_directory(self, extension: tuple[str] = (".plx", ".xml")) -> list[str]:
         if not os.path.exists(self.directory):
