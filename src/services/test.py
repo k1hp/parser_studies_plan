@@ -84,6 +84,8 @@ class WebParsingService:
 
       desc_divs = main_div.find_all('div', class_='desc')
 
+      
+
       # Функция для обработки секций с дисциплинами
       def process_section(section_div: Tag, target_field: str):
         """Извлекает данные из секции (rpd, fos, prak, mm)"""
@@ -125,19 +127,24 @@ class WebParsingService:
                             result_by_year[current_year][target_field].append(text)
                             logger.info(f"      Added practic: {text[:50]}")
                     else:
-                        # Пробуем разные способы извлечения кода
-                        code_match = re.match(r'^([A-Z0-9\.\(\)]+?)[_\s]', text)
-                        if not code_match:
-                            code_match = re.match(r'^([A-Z0-9\.\(\)]+)', text)
+                        # Сначала пробуем новый улучшенный метод
+                        disc_code, disc_name = self._extract_discipline_code_and_name(text)
                         
-                        if code_match:
-                            disc_code = code_match.group(1)
-                            disc_name = text[len(disc_code):].lstrip('_').lstrip(' ').strip()
-                            if not disc_name:
+                        # Если код не найден, используем старый метод как fallback
+                        if not disc_code or disc_code == text or disc_code.startswith('UNKNOWN'):
+                            # Пробуем разные способы извлечения кода
+                            code_match = re.match(r'^([A-Z0-9\.\(\)]+?)[_\s]', text)
+                            if not code_match:
+                                code_match = re.match(r'^([A-Z0-9\.\(\)]+)', text)
+                            
+                            if code_match:
+                                disc_code = code_match.group(1)
+                                disc_name = text[len(disc_code):].lstrip('_').lstrip(' ').strip()
+                                if not disc_name:
+                                    disc_name = text
+                            else:
+                                disc_code = f"UNKNOWN_{idx}"
                                 disc_name = text
-                        else:
-                            disc_code = f"UNKNOWN_{idx}"
-                            disc_name = text
                         
                         disc_detail = {"discipline_name": disc_name, "discipline_code": disc_code}
                         
@@ -222,6 +229,57 @@ class WebParsingService:
                       len(result['methodical_materials']))
       return results
     
+    def _extract_discipline_code_and_name(self, text: str) -> tuple[str, str]:
+        """
+        Извлекает код дисциплины и название из текста.
+        Возвращает (code, name)
+        """
+        text = text.strip()
+        
+        # Паттерны для поиска кода в начале строки
+        patterns = [
+            # Б1.В.01.01, Б1.О.13.01, К.М.01.01 и т.д.
+            r'^([A-ZА-Я]+\d*\.?[A-ZА-Я]?\.?\d+\.?\d*\.?\d*[A-ZА-Я]?\.?\d*)(?:[_\s]|$)',
+            # Коды с суффиксами _РП, _РПД, _ФОС, _ММ
+            r'^([A-ZА-Я0-9\.\(\)]+?)(?:_РПД?|_ФОС|_ММ)(?:[_\s]|$)',
+            # Упрощенный вариант
+            r'^([A-ZА-Я0-9\.\(\)]+?)(?:[_\s]|$)'
+        ]
+        
+        code = ""
+        name = text
+        
+        for pattern in patterns:
+            match = re.match(pattern, text)
+            if match:
+                code = match.group(1)
+                name = text[len(code):].lstrip('_').lstrip(' ').strip()
+                if not name or len(name) < 3:
+                    name = text
+                break
+        
+        # Очищаем код от суффиксов
+        if code:
+            for suffix in ['_РП', '_РПД', '_ФОС', '_ММ', '_РП_', '_РПД_', '_ФОС_', '_ММ_']:
+                if code.endswith(suffix):
+                    code = code[:-len(suffix)]
+                    break
+        
+        # Если код не найден, но есть суффикс
+        if not code:
+            for suffix in ['_РП', '_РПД', '_ФОС', '_ММ']:
+                if suffix in text:
+                    parts = text.split(suffix)
+                    if len(parts) > 0 and re.search(r'\d+\.\d+', parts[0]):
+                        code = parts[0].strip()
+                        name = text[len(code):].lstrip('_').lstrip(' ').strip()
+                        break
+        
+        if not name or name == text:
+            name = text
+        
+        return code, name
+    
     def parse_and_validate_all(self) -> List[CurriculumModel]:
         results = self.parse_by_year()
         models = []
@@ -234,7 +292,7 @@ class WebParsingService:
     
 
 if __name__ == "__main__":
-    service = WebParsingService("https://mauniver.ru/sveden/education/op/42842#prak")
+    service = WebParsingService("https://mauniver.ru/sveden/education/op/55217#prak")
     results = service.parse_by_year()
     
     for result in results:
