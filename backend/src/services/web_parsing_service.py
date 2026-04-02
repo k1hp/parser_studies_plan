@@ -16,9 +16,9 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(mess
 
 class WebParsingService:
 
-    def __init__(self, url: str, curriculum_file: str = "plan.xml"):
-        self.url = url
+    def __init__(self, curriculum_file: str = "plan.xml"):
         self.curriculum_file = curriculum_file
+        self.url: str | None = None  # грустно
 
     def parse_by_year(self) -> List[Dict[str, Any]]:
       logger.info("Start parsing URL %s", self.url)
@@ -286,6 +286,11 @@ class WebParsingService:
             except Exception as e:
                 logger.error(f"Validation error for year {data['curriculum_year']}: {e}")
         return models
+
+    def parse_url(self, url: str) -> list[CurriculumModel]:
+        self.url = url
+        return self.parse_and_validate_all()
+
     
 
 if __name__ == "__main__":

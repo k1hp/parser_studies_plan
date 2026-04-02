@@ -1,7 +1,8 @@
 from fastapi import Depends
 
 from backend.src.services.analyze_service import AnalyzeService
-from backend.src.services.xml_parsing_service import WebParsingService, XmlParsingService
+from backend.src.services.xml_parsing_service import  XmlParsingService
+from backend.src.services.web_parsing_service import WebParsingService
 
 
 def get_xml_parser_service() -> XmlParsingService:

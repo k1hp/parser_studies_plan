@@ -1,7 +1,8 @@
 from backend.src.schemas.response_schemas import ApiResponseSchema
 from backend.src.schemas.web_schemas import CurriculumModel
 from backend.src.schemas.xml_schemas import DisciplineDetail, ResponseModel
-from backend.src.services.xml_parsing_service import WebParsingService, XmlParsingService
+from backend.src.services.xml_parsing_service import XmlParsingService
+from backend.src.services.web_parsing_service import WebParsingService
 from backend.src.utils import applogger
 
 
@@ -31,7 +32,16 @@ class AnalyzeService:
         web_data = self.web_parser_service.parse_url(url)
         applogger.debug("web data", web_data)
         xml_data = self.xml_parser_service.extract_from_content(content)
-        return self._compare_models(web_data, xml_data)
+
+        web_model = None
+        for model in web_data:
+            if xml_data.start_year == model.curriculum_year:
+                web_model = model
+                break
+        if web_model is None:
+            raise ValueError(f"Отсутствует модель web по году {xml_data.start_year}")
+
+        return self._compare_models(web_model, xml_data)
 
 
 
