@@ -10,20 +10,24 @@
     </style>
 </head>
 <body>
-    <h1>Отчет по направлению: {{ direction_name }}</h1>
-    <p>Код: {{ direction_code }} | Год: {{ start_year }}</p>
+    <h1>Отчет по направлению: {{ specialty }}</h1>
+    <p>Форма обучения: {{ form_education }} | Год: {{ curriculum_year }}</p>
 
     <table>
+    <thead>
         <tr>
-            <th>Дисциплина</th>
             <th>Код</th>
+            <th>Название дисциплины</th>
         </tr>
-        {% for discipline in disciplines %}
+    </thead>
+    <tbody>
+        {% for disc in disciplines %}
         <tr>
-            <td>{{ discipline.name }}</td>
-            <td>{{ discipline.code }}</td>
+            <td>{{ disc.discipline_code or '-' }}</td>
+            <td>{{ disc.discipline_name }}</td>
         </tr>
         {% endfor %}
-    </table>
+    </tbody>
+</table>
 </body>
 </html>
