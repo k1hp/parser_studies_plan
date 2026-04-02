@@ -13,7 +13,6 @@ class CurriculumModel(BaseModel):
     calendar_graphic: bool = Field(..., description="Наличие календарного учебного графика")
     education_plan: bool = Field(..., description="Наличие учебного плана")
 
-    # all_programs: list[str] = Field(default=[], description="Список всех образовательных программ")
     working_programs: list[DisciplineDetail] = Field(default=[], description="Список рабочих программ дисциплин")
     fos_materials: list[DisciplineDetail] = Field(default=[], description="Список ФОС материалов")
     practic_programs: list[str] = Field(default=[], description="Список программ практик (не сравниваем)")

@@ -67,3 +67,5 @@ Pipfile.lock
 
 # vscode
 .vs
+
+uv.lock
