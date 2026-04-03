@@ -39,11 +39,24 @@ async def analyze(url: str, report_format: REPORT_FORMATS, file: UploadFile = Fi
     response: ApiResponseSchema = analyze_service.analyze_one(url, content)
     if report_format == "json":
         return response
+
+    elif report_format == "html":
+        converted_content = pdf_service.create_html(response)
+
+        return Response(
+            content=converted_content,
+            media_type="text/html",
+            headers={
+                "Content-Disposition": 'attachment; filename="report.html"'
+            }
+        )
+
     elif report_format == "pdf":
         # передаешь response в твой конвертер pdf и потом возвращаешь сюда файл
-        pdf_content = pdf_service.create_pdf(response)
+        converted_content = pdf_service.create_pdf(response)
+
         return Response(
-            content=pdf_content,
+            content=converted_content,
             media_type="application/pdf",
             headers={
                 "Content-Disposition": 'attachment; filename="report.pdf"'

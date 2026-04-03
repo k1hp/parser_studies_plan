@@ -10,11 +10,7 @@ class PDFService:
         self.env = Environment(loader=FileSystemLoader(template_dir))
         self.template_name = "report_template.html"
 
-    def create_pdf(self, data: ApiResponseSchema, output_path: str = None) -> bytes:
-        # if isinstance(data, list):
-            # template = self.env.get_template('comparison_template.html')
-            # html_out = template.render(errors=data)
-        # else:
+    def _render(self, data: ApiResponseSchema, output_path: str = None) -> str:
         template = self.env.get_template(self.template_name)
         html_out = template.render(
             specialty=data.specialty,
@@ -37,5 +33,16 @@ class PDFService:
 
             disciplines=data.working_programs
         )
+        return html_out
 
-        return HTML(string=html_out).write_pdf(target=output_path)
+    def create_pdf(self, data: ApiResponseSchema, output_path: str = None) -> bytes:
+        # if isinstance(data, list):
+            # template = self.env.get_template('comparison_template.html')
+            # html_out = template.render(errors=data)
+        # else:
+
+
+        return HTML(string=self._render(data, output_path)).write_pdf(target=output_path)
+
+    def create_html(self, data: ApiResponseSchema, output_path: str = None) -> bytes:
+        return self._render(data, output_path).encode("utf-8")
