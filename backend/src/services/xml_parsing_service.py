@@ -27,16 +27,23 @@ class PlxDataExtractor:
         return ""
 
     @staticmethod
-    def extract_direction_name(root: ET.Element) -> str:
+    def extract_direction_name(root: ET.Element) -> tuple[str, str]:
+        direction_name = ""
+        profile_name = ""
+
         try:
             for elem in root.iter():
                 if elem.tag.endswith('ООП'):
-                    name = elem.get('Название', '')
-                    if name:
-                        return name.strip()
+                    parent_code = elem.get('КодРодительскогоООП', '')
+                    if not parent_code:
+                        direction_name = elem.get('Название', '')
+
+                    else:
+                        profile_name = elem.get('Название', '')
+
         except Exception as e:
             applogger.error(f"Ошибка при извлечении названия направления: {e}")
-        return ""
+        return direction_name.strip(), profile_name.strip()
 
     @staticmethod
     def extract_start_year(root: ET.Element) -> int:
@@ -86,11 +93,6 @@ class PlxDataExtractor:
             applogger.error(f"Ошибка при извлечении информации о дисциплинах: {e}")
             return []
 
-# примеры вам, то есть конечная точка
-# все по своим файлам
-
-
-
 class XmlParsingService:
 
     def __init__(self, pdf_service: PDFService):
@@ -136,13 +138,15 @@ class XmlParsingService:
             return None
 
         direction_code = PlxDataExtractor.extract_direction_code(root)
-        direction_name = PlxDataExtractor.extract_direction_name(root)
+        direction_name, profile_name = PlxDataExtractor.extract_direction_name(root)
         start_year = PlxDataExtractor.extract_start_year(root)
         disciplines = PlxDataExtractor.extract_disciplines_details(root)
 
+        full_direction_name = f"{direction_name}, {profile_name}" if profile_name else direction_name
+
         return ResponseModel(
             direction_code=direction_code,
-            direction_name=direction_name,
+            direction_name=full_direction_name,
             start_year=start_year,
             disciplines=disciplines
         )
