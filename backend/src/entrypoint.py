@@ -1,14 +1,16 @@
 from enum import Enum
 from typing import List, Literal
 
-from fastapi import FastAPI, UploadFile, File, Depends, APIRouter
+from fastapi import FastAPI, UploadFile, File, Depends, APIRouter, Response
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
-from src.dependencies import get_analyze_service
+from src.dependencies import get_analyze_service, get_pdf_service
 from src.schemas.response_schemas import ApiResponseSchema
 from src.services.analyze_service import AnalyzeService
 from src.utils import applogger
+from src.services.pdf_service import PDFService
+
 
 app = FastAPI()
 
@@ -28,7 +30,7 @@ REPORT_FORMATS = Literal["json", "html", "pdf"]
 
 @router.post("/compare/{report_format}")
 async def analyze(url: str, report_format: REPORT_FORMATS, file: UploadFile = File(...),
-            analyze_service: AnalyzeService = Depends(get_analyze_service)):
+            analyze_service: AnalyzeService = Depends(get_analyze_service), pdf_service: PDFService = Depends(get_pdf_service)):
     # TODO валидация url
     content = await file.read()
     applogger.debug(f"Analyzing {url}")
@@ -39,7 +41,15 @@ async def analyze(url: str, report_format: REPORT_FORMATS, file: UploadFile = Fi
         return response
     elif report_format == "pdf":
         # передаешь response в твой конвертер pdf и потом возвращаешь сюда файл
-        return ...
+        pdf_content = pdf_service.create_pdf(response)
+        return Response(
+            content=pdf_content,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": 'attachment; filename="report.pdf"'
+            }
+        )
+
 
 
 @router.post("/compare/files/{report_format}")

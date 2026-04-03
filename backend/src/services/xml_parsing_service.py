@@ -9,6 +9,8 @@ from src.schemas.xml_schemas import ResponseModel, DisciplineDetail
 from src.schemas.web_schemas import CurriculumModel
 # from src.models.response_model_xml_parser import ResponseModel, DisciplineDetail
 from src.services.file_manager import FileManager
+from src.services.pdf_service import PDFService
+
 
 class PlxDataExtractor:
 
@@ -25,16 +27,23 @@ class PlxDataExtractor:
         return ""
 
     @staticmethod
-    def extract_direction_name(root: ET.Element) -> str:
+    def extract_direction_name(root: ET.Element) -> tuple[str, str]:
+        direction_name = ""
+        profile_name = ""
+
         try:
             for elem in root.iter():
                 if elem.tag.endswith('ООП'):
-                    name = elem.get('Название', '')
-                    if name:
-                        return name.strip()
+                    parent_code = elem.get('КодРодительскогоООП', '')
+                    if not parent_code:
+                        direction_name = elem.get('Название', '')
+
+                    else:
+                        profile_name = elem.get('Название', '')
+
         except Exception as e:
             applogger.error(f"Ошибка при извлечении названия направления: {e}")
-        return ""
+        return direction_name.strip(), profile_name.strip()
 
     @staticmethod
     def extract_start_year(root: ET.Element) -> int:
@@ -84,11 +93,6 @@ class PlxDataExtractor:
             applogger.error(f"Ошибка при извлечении информации о дисциплинах: {e}")
             return []
 
-# примеры вам, то есть конечная точка
-# все по своим файлам
-
-
-
 class XmlParsingService:
 
     def __init__(self):
@@ -133,13 +137,15 @@ class XmlParsingService:
             return None
 
         direction_code = PlxDataExtractor.extract_direction_code(root)
-        direction_name = PlxDataExtractor.extract_direction_name(root)
+        direction_name, profile_name = PlxDataExtractor.extract_direction_name(root)
         start_year = PlxDataExtractor.extract_start_year(root)
         disciplines = PlxDataExtractor.extract_disciplines_details(root)
 
+        full_direction_name = f"{direction_name}, {profile_name}" if profile_name else direction_name
+
         return ResponseModel(
             direction_code=direction_code,
-            direction_name=direction_name,
+            direction_name=full_direction_name,
             start_year=start_year,
             disciplines=disciplines
         )
@@ -197,20 +203,37 @@ class WebParsingService:
 
 
 if __name__ == "__main__":
+    pdf_service = PDFService(template_dir="../templates")
     current_script_dir = os.path.dirname(os.path.abspath(__file__))
     # folder_path = os.path.abspath(os.path.join(current_script_dir, "..", "directory"))
     folder_path = str(Path.home() / "Downloads")
     file_manager = FileManager(folder_path)
-    extractor = XmlParsingService()
+    extractor = XmlParsingService(pdf_service=pdf_service)
     files = file_manager.get_files_in_directory()
     contents = file_manager.get_files_contents(files)
     extracted_items = extractor.extract_all(contents)
 
-    if extracted_items:
-        for response in extracted_items:
+    if files:
+        for file_path in files:
+            content = file_manager.get_files_contents([file_path])[0]
 
-            applogger.debug("\nJSON представление:")
-            applogger.debug(response.model_dump_json(indent=2, ensure_ascii=False))
+            response = extractor.extract_from_content(content)
+
+            if response:
+                base_name = os.path.splitext(os.path.basename(file_path))[0]
+
+                pdf_file_name = f"report_{base_name}.pdf"
+
+                pdf_bytes = pdf_service.create_pdf(response)
+                with open(pdf_file_name, "wb") as f:
+                    f.write(pdf_bytes)
+
+                applogger.info(f"PDF сохранен: {pdf_file_name} (из файла {file_path})")
+
+            #applogger.debug("\nJSON представление:")
+            #applogger.debug(response.model_dump_json(indent=2, ensure_ascii=False))
+
+        #pdf_content = pdf_service.create_pdf(extracted_items)
 
     else:
         applogger.info(f"Файлы не найдены в директории: {folder_path}")
