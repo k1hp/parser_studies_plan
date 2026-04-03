@@ -13,9 +13,11 @@ from src.services.pdf_service import PDFService
 
 
 class PlxDataExtractor:
+    """Класс, отвечающий за извлечение данных из XML-структуры, с учетом различных форматов представления данных и обеспечивающий устойчивость к отсутствию данных."""
 
     @staticmethod
     def extract_direction_code(root: ET.Element) -> str:
+        """ Извлекает код направления подготовки из XML, учитывая различные структуры представления данных и обеспечивая устойчивость к отсутствию данных."""
         try:
             for elem in root.iter():
                 if elem.tag.endswith('ООП'):
@@ -28,6 +30,7 @@ class PlxDataExtractor:
 
     @staticmethod
     def extract_direction_name(root: ET.Element) -> tuple[str, str]:
+        """ Извлекает название направления подготовки и профиль из XML-элемента ООП, учитывая различные структуры представления данных."""
         direction_name = ""
         profile_name = ""
 
@@ -47,6 +50,7 @@ class PlxDataExtractor:
 
     @staticmethod
     def extract_start_year(root: ET.Element) -> int:
+        """Извлекает год начала обучения из XML, пытаясь найти его в атрибутах и обрабатывая различные форматы представления года."""
         try:
             for elem in root.iter():
                 if elem.tag.endswith('Планы'):
@@ -66,6 +70,7 @@ class PlxDataExtractor:
 
     @staticmethod
     def extract_disciplines_details(root: ET.Element) -> list[DisciplineDetail]:
+        """Извлекает список дисциплин из XML, разделяя и тем самым обеспечивая уникальность по названию и коду."""
         unique_disciplines = []
 
         try:
@@ -94,11 +99,13 @@ class PlxDataExtractor:
             return []
 
 class XmlParsingService:
+    """Класс, отвечающий за парсинг XML-структур."""
 
     def __init__(self):
         self._root = None
 
     def _parse_xml(self, content: bytes) -> ET.Element | None:
+        """Пытается распарсить XML из байтового контента, используя несколько кодировок."""
         if not content:
             return None
         try:
@@ -121,6 +128,7 @@ class XmlParsingService:
             return None
 
     def extract_all(self, contents: list[bytes]) -> list[ResponseModel]:
+        """Извлекает данные из нескольких XML-файлов, возвращая список моделей ResponseModel."""
         results = []
 
         for content in contents:
@@ -130,6 +138,7 @@ class XmlParsingService:
         return results
 
     def extract_from_content(self, content: bytes) -> ResponseModel | None:
+        """Извлекает данные из одного XML-файла, возвращая модель ResponseModel или None в случае ошибок."""
         root = self._parse_xml(content)
 
         if root is None:
@@ -151,6 +160,7 @@ class XmlParsingService:
         )
 
 class WebParsingService:
+    """Временная заглушка так, как plx парсер был написан быстрее """
     def __init__(self):
         ...
 
@@ -203,6 +213,7 @@ class WebParsingService:
 
 
 if __name__ == "__main__":
+    """Пример использования XmlParsingService для извлечения данных из XML-файлов и создания PDF-отчетов на основе этих данных."""  
     pdf_service = PDFService(template_dir="../templates")
     current_script_dir = os.path.dirname(os.path.abspath(__file__))
     # folder_path = os.path.abspath(os.path.join(current_script_dir, "..", "directory"))

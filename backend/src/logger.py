@@ -1,11 +1,11 @@
 import logging
-from typing import List, Dict, Any
+from typing import list, Dict, Any
 from src.schemas.web_schemas import CurriculumModel, DisciplineDetail
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def print_results_as_logging(results: List[Dict[str, Any]]) -> None:
+def print_results_as_logging(results: list[Dict[str, Any]]) -> None:
     """Выводит результаты парсинга через логирование"""
     for result in results:
         logger.info("=" * 80)

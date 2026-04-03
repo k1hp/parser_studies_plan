@@ -16,6 +16,8 @@ class AppLogger:
         return logger
 
 def print_response(response: ResponseModel) -> None:
+    """Выводит результаты парсинга через логирование"""
+    
     applogger.debug("=" * 120)
     applogger.debug(f"\nКод направления: {response.direction_code}")
     applogger.debug(f"Название направления: {response.direction_name}")
