@@ -11,14 +11,40 @@ body{
 header{
     padding: 15px;
     border-bottom: 1px solid #cccccc;
+
 }
 header h1{
     font-size: 25pt;
 }
+.main{
+    background-color: rgb(35, 35, 35);
+    height: 48px;
+    width: 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
+    color: white;
+    padding: 5px;
+    display: flex;
+    align-items: center;
+}
+.main img{
+    height: 40px;
+}
+.main img:hover{
+    opacity: 0.8;
+}
+.right{
+    display: flex;
+    margin-left: auto;
+}
+
+
 p, input{
     font-size: 15pt;
 }
 .content{
+    background-color: black;
     margin-top: 100px;
     width: 780px;
     background: rgba(255,255,255,0.96);
