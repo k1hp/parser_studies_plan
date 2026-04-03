@@ -6,15 +6,19 @@
         <link rel="stylesheet" href="css/global.css">
     </head>
     <body>
+        <header class="main">
+            <a href="https://mauniver.ru/" ><img class="head" src="pic/logo.PNG" alt="Главная страница"></a>
+            
+        </header>
         <div class="content">
             <header>
                 <h1>Результат сравнения</h1>
             </header>
             <div class="result" id="result">
-                <div id="errorMessage" style="color: red; margin-bottom: 15px; display: none;"></div>
+                <div id="errorMessage" class="error-message"></div>
                 <div id="resultContent"></div>
             </div>
-            <div class="conteiner">
+            <div class="conteiner result-buttons">
                 <button class="submitBtn" onclick="window.location.href = 'page1_URLnFile.html'">Назад к форме</button>
                 <button class="submitBtn" onclick="location.reload()" style="margin-left: 10px;">Обновить</button>
             </div>
@@ -41,196 +45,71 @@
             
             function formatValue(value) {
                 if (typeof value === 'boolean') {
-                    return value ? '<span style="color: green;">✓ Да</span>' : '<span style="color: red;">✗ Нет</span>';
+                    return value ? '✓ Есть' : '✗ Нет';
                 }
                 if (value === null || value === undefined) {
-                    return '<span style="color: #999;">—</span>';
+                    return '—';
                 }
                 if (Array.isArray(value)) {
-                    if (value.length === 0) return '<span style="color: #999;">—</span>';
-                    const hasObjects = value.some(item => typeof item === 'object' && item !== null);
-                    if (hasObjects) {
-                        let html = '<div style="margin-top: 5px;">';
-                        value.forEach((item, idx) => {
-                            html += '<div style="margin-bottom: 8px;"><strong>' + (idx + 1) + '.</strong> ' + formatValue(item) + '</div>';
-                        });
-                        html += '</div>';
-                        return html;
-                    }
-                    return '<ul style="margin: 5px 0 0 20px;"><li>' + value.map(item => escapeHtml(String(item))).join('</li><li>') + '</li></ul>';
-                }
-                if (typeof value === 'object') {
-                    let html = '<div style="margin-top: 5px;">';
-                    for (const [key, val] of Object.entries(value)) {
-                        if (val !== undefined && val !== null && val !== '') {
-                            html += '<div style="margin: 5px 0;"><strong>' + formatFieldName(key) + ':</strong> ' + formatValue(val) + '</div>';
+                    if (value.length === 0) return '—';
+                    let html = '<ul class="items-list" style="margin: 5px 0 0 20px;">';
+                    value.forEach(item => {
+                        if (typeof item === 'object' && item !== null) {
+                            let displayText = item.to_string || item.discipline_name + ' ' + (item.discipline_code || '');
+                            html += '<li>' + escapeHtml(displayText) + '</li>';
+                        } else {
+                            html += '<li>' + escapeHtml(String(item)) + '</li>';
                         }
-                    }
-                    html += '</div>';
+                    });
+                    html += '</ul>';
                     return html;
                 }
-                return '<span>' + escapeHtml(String(value)) + '</span>';
+                if (typeof value === 'object') {
+                    return escapeHtml(JSON.stringify(value));
+                }
+                return escapeHtml(String(value));
             }
             
             function formatFieldName(key) {
                 const names = {
-                    'direction_code': 'Код направления',
-                    'direction_name': 'Название направления',
-                    'start_year': 'Год начала обучения',
-                    'total_disciplines': 'Всего дисциплин',
-                    'disciplines': 'Дисциплины',
-                    'discipline_name': 'Название дисциплины',
-                    'discipline_code': 'Код дисциплины',
-                    'name': 'Название',
-                    'code': 'Код',
-                    'description': 'Описание',
-                    'semester': 'Семестр',
-                    'hours': 'Часы',
-                    'credits': 'Кредиты (ЗЕТ)',
-                    'education_form': 'Форма обучения',
-                    'study_period': 'Срок обучения',
-                    'department': 'Кафедра',
-                    'is_active': 'Активен',
-                    'has_exam': 'Экзамен',
-                    'has_credit': 'Зачет'
+                    'specialty': 'Специальность',
+                    'discipline_code': 'Код направления',
+                    'curriculum_year': 'Год набора',
+                    'lvl_education': 'Уровень образования',
+                    'form_education': 'Форма обучения',
+                    'education_program': 'Образовательная программа',
+                    'calendar_graphic': 'Календарный учебный график',
+                    'education_plan': 'Учебный план',
+                    'working_programs': 'Рабочие программы дисциплин',
+                    'fos_materials': 'ФОС материалы',
+                    'practic_programs': 'Программы практик',
+                    'methodical_materials': 'Методические материалы',
+                    'gia_program': 'ГИА',
+                    'education_program_vosp': 'Рабочая программа воспитания',
+                    'curriculum_plan': 'Календарный план воспитательной работы'
                 };
                 return names[key] || key.replace(/_/g, ' ');
             }
             
-            // Функция для поиска дисциплин в любом месте объекта
-            function findDisciplines(obj, path = '') {
-                let disciplines = null;
+            // Функция для создания выпадающего блока
+            function createAccordionSection(title, content, isOpen = false) {
+                let uniqueId = 'section_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8);
+                let displayStyle = isOpen ? 'block' : 'none';
                 
-                // Прямой поиск по ключам
-                if (obj.disciplines && Array.isArray(obj.disciplines) && obj.disciplines.length > 0) {
-                    return obj.disciplines;
-                }
-                if (obj.discipline_list && Array.isArray(obj.discipline_list) && obj.discipline_list.length > 0) {
-                    return obj.discipline_list;
-                }
-                if (obj.subjects && Array.isArray(obj.subjects) && obj.subjects.length > 0) {
-                    return obj.subjects;
-                }
-                if (obj.courses && Array.isArray(obj.courses) && obj.courses.length > 0) {
-                    return obj.courses;
-                }
-                if (obj.items && Array.isArray(obj.items) && obj.items.length > 0) {
-                    // Проверяем, похожи ли элементы на дисциплины
-                    if (obj.items[0] && (obj.items[0].discipline_name || obj.items[0].name || obj.items[0].code)) {
-                        return obj.items;
-                    }
-                }
-                
-                // Рекурсивный поиск по всем полям
-                for (const [key, value] of Object.entries(obj)) {
-                    if (Array.isArray(value) && value.length > 0) {
-                        // Проверяем, содержит ли массив объекты, похожие на дисциплины
-                        const firstItem = value[0];
-                        if (firstItem && typeof firstItem === 'object') {
-                            if (firstItem.discipline_name || firstItem.name || firstItem.discipline_code || firstItem.code) {
-                                return value;
-                            }
-                            // Если внутри массива есть поля, которые могут быть дисциплинами
-                            if (firstItem.disciplines && Array.isArray(firstItem.disciplines)) {
-                                return firstItem.disciplines;
-                            }
-                        }
-                    }
-                    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-                        const found = findDisciplines(value, path + key + '.');
-                        if (found) return found;
-                    }
-                }
-                
-                return null;
+                return `
+                    <div class="accordion-section">
+                        <h3 class="accordion-header" onclick="toggleSection('${uniqueId}', this)">
+                            ${title}
+                            <span class="accordion-icon">${isOpen ? '▲' : '▼'}</span>
+                        </h3>
+                        <div id="${uniqueId}" class="accordion-content" style="display: ${displayStyle};">
+                            ${content}
+                        </div>
+                    </div>
+                `;
             }
             
-            function renderGeneralInfo(data) {
-                let html = '<div style="background: #f5f5f5; padding: 15px; border-radius: 5px; margin-bottom: 20px;">';
-                html += '<h3 style="margin-top: 0;">Общая информация</h3>';
-                
-                const fields = ['direction_code', 'direction_name', 'start_year', 'education_form', 'study_period', 'department', 'total_disciplines'];
-                let has = false;
-                for (const f of fields) {
-                    if (data[f] !== undefined && data[f] !== null && data[f] !== '') {
-                        has = true;
-                        html += '<div style="margin: 8px 0;"><strong>' + formatFieldName(f) + ':</strong> ' + formatValue(data[f]) + '</div>';
-                    }
-                }
-                
-                const bools = ['is_active', 'has_exam', 'has_credit'];
-                for (const f of bools) {
-                    if (data[f] !== undefined && typeof data[f] === 'boolean') {
-                        has = true;
-                        html += '<div style="margin: 8px 0;"><strong>' + formatFieldName(f) + ':</strong> ' + formatValue(data[f]) + '</div>';
-                    }
-                }
-                
-                if (!has) html += '<div style="color: #999;">— нет данных —</div>';
-                html += '</div>';
-                return html;
-            }
-            
-            function renderExtraFields(data, excludeDisciplines = false) {
-                const exclude = ['direction_code', 'direction_name', 'start_year', 'disciplines', 'discipline_list', 'subjects', 'courses', 'items', 'education_form', 'study_period', 'department', 'total_disciplines', 'is_active', 'has_exam', 'has_credit'];
-                const extra = {};
-                for (const [k, v] of Object.entries(data)) {
-                    if (!exclude.includes(k) && k !== 'disciplines' && v !== undefined && v !== null && v !== '') {
-                        // Если это не массив с дисциплинами
-                        if (!Array.isArray(v) || (Array.isArray(v) && v.length > 0 && typeof v[0] === 'object' && !v[0].discipline_name && !v[0].name)) {
-                            extra[k] = v;
-                        } else if (!Array.isArray(v)) {
-                            extra[k] = v;
-                        }
-                    }
-                }
-                if (Object.keys(extra).length === 0) return '';
-                
-                let html = '<div style="background: #f0f0f0; padding: 15px; border-radius: 5px; margin-bottom: 20px;">';
-                html += '<h3 style="margin-top: 0;">Дополнительная информация</h3>';
-                for (const [k, v] of Object.entries(extra)) {
-                    html += '<div style="margin: 8px 0;"><strong>' + formatFieldName(k) + ':</strong> ' + formatValue(v) + '</div>';
-                }
-                html += '</div>';
-                return html;
-            }
-            
-            function renderDisciplines(disciplines) {
-                if (!disciplines || !Array.isArray(disciplines) || disciplines.length === 0) {
-                    return '';
-                }
-                
-                let html = '<div style="background: #f0f0f0; padding: 15px; border-radius: 5px;">';
-                html += '<h3 style="margin-top: 0;">Дисциплины (' + disciplines.length + ')</h3>';
-                
-                disciplines.forEach((d, idx) => {
-                    let name = d.discipline_name || d.name || d.title || d.discipline || 'Без названия';
-                    let id = 'd_' + idx + '_' + Date.now() + '_' + Math.random();
-                    
-                    html += '<div style="border: 1px solid #ddd; border-radius: 5px; margin-bottom: 10px;">';
-                    html += '<div style="background: #e0e0e0; padding: 10px; cursor: pointer; font-weight: bold;" onclick="toggle(\'' + id + '\')">';
-                    html += (idx + 1) + '. ' + escapeHtml(String(name));
-                    if (d.discipline_code) html += ' <span style="background: #ccc; padding: 2px 6px; border-radius: 3px; font-size: 12px;">' + escapeHtml(d.discipline_code) + '</span>';
-                    if (d.code) html += ' <span style="background: #ccc; padding: 2px 6px; border-radius: 3px; font-size: 12px;">' + escapeHtml(d.code) + '</span>';
-                    if (d.credits) html += ' <span style="background: #ccc; padding: 2px 6px; border-radius: 3px; font-size: 12px;">' + d.credits + ' ЗЕТ</span>';
-                    html += '<span style="float: right;">▼</span>';
-                    html += '</div>';
-                    html += '<div id="' + id + '" style="padding: 10px; display: none;">';
-                    
-                    let has = false;
-                    for (const [k, v] of Object.entries(d)) {
-                        if (v !== undefined && v !== null && v !== '' && k !== 'discipline_name' && k !== 'name' && k !== 'title' && k !== 'discipline') {
-                            has = true;
-                            html += '<div style="margin: 8px 0;"><strong>' + formatFieldName(k) + ':</strong> ' + formatValue(v) + '</div>';
-                        }
-                    }
-                    if (!has) html += '<div style="color: #999;">— нет дополнительной информации —</div>';
-                    html += '</div></div>';
-                });
-                html += '</div>';
-                return html;
-            }
-            
+            // Основная функция отображения
             function displayResult(data) {
                 if (!data) {
                     showError('Нет данных для отображения');
@@ -241,46 +120,106 @@
                     try {
                         data = JSON.parse(data);
                     } catch(e) {
-                        resultContainer.innerHTML = '<pre style="background: #f5f5f5; padding: 15px;">' + escapeHtml(data) + '</pre>';
+                        resultContainer.innerHTML = '<pre class="json-preview">' + escapeHtml(data) + '</pre>';
                         return;
                     }
                 }
                 
-                let html = '';
-                html += renderGeneralInfo(data);
+                let html = '<div class="result-container">';
                 
-                // Ищем дисциплины
-                let disciplines = findDisciplines(data);
+                // === Основная информация ===
+                let mainInfo = '<div class="info-main">';
+                mainInfo += '<h3>Основная информация</h3>';
                 
-                if (disciplines && disciplines.length > 0) {
-                    // Если нашли дисциплины, рендерим их
-                    html += renderDisciplines(disciplines);
-                    // Дополнительные поля показываем без дисциплин, чтобы не дублировать
-                    html += renderExtraFields(data, true);
-                } else {
-                    // Если дисциплин не нашли, показываем все дополнительные поля
-                    html += renderExtraFields(data);
-                    html += '<div style="background: #f0f0f0; padding: 15px; border-radius: 5px;">Дисциплины не найдены в данных</div>';
-                    
-                    // Для отладки показываем структуру данных
-                    console.log('Структура полученных данных:', data);
+                const mainFields = ['specialty', 'discipline_code', 'curriculum_year', 'lvl_education', 'form_education'];
+                for (const field of mainFields) {
+                    if (data[field] !== undefined && data[field] !== null && data[field] !== '') {
+                        mainInfo += '<div class="info-field"><strong>' + formatFieldName(field) + ':</strong> ' + formatValue(data[field]) + '</div>';
+                    }
+                }
+                mainInfo += '</div>';
+                html += mainInfo;
+                
+                // === Наличие разделов ===
+                let sectionsInfo = '<div class="info-sections">';
+                sectionsInfo += '<h3>Наличие разделов в учебном плане</h3>';
+                
+                const sectionFields = ['education_program', 'calendar_graphic', 'education_plan', 'gia_program', 'education_program_vosp', 'curriculum_plan'];
+                for (const field of sectionFields) {
+                    if (data[field] !== undefined) {
+                        sectionsInfo += '<div class="info-field"><strong>' + formatFieldName(field) + ':</strong> ' + formatValue(data[field]) + '</div>';
+                    }
+                }
+                sectionsInfo += '</div>';
+                html += sectionsInfo;
+                
+                // === Рабочие программы дисциплин ===
+                if (data.working_programs && data.working_programs.length > 0) {
+                    let content = '';
+                    data.working_programs.forEach((item, idx) => {
+                        let name = item.discipline_name || '';
+                        let code = item.discipline_code || '';
+                        content += `<div class="item-row">
+                            <span class="item-number">${idx + 1}.</span> ${escapeHtml(name)} 
+                            <span class="item-badge">${escapeHtml(code)}</span>
+                        </div>`;
+                    });
+                    html += createAccordionSection('Рабочие программы дисциплин (' + data.working_programs.length + ') Отсутствует', content);
                 }
                 
+                // === ФОС материалы ===
+                if (data.fos_materials && data.fos_materials.length > 0) {
+                    let content = '';
+                    data.fos_materials.forEach((item, idx) => {
+                        let name = item.discipline_name || '';
+                        let code = item.discipline_code || '';
+                        content += `<div class="item-row">
+                            <span class="item-number">${idx + 1}.</span> ${escapeHtml(name)} 
+                            <span class="item-badge">${escapeHtml(code)}</span>
+                        </div>`;
+                    });
+                    html += createAccordionSection('ФОС материалы (' + data.fos_materials.length + ') Отсутствует', content);
+                }
+                
+                // === Программы практик ===
+                if (data.practic_programs && data.practic_programs.length > 0) {
+                    let content = '';
+                    data.practic_programs.forEach((item, idx) => {
+                        content += `<div class="item-row">
+                            <span class="item-number">${idx + 1}.</span> ${escapeHtml(item)}
+                        </div>`;
+                    });
+                    html += createAccordionSection('Программы практик (' + data.practic_programs.length + ')', content);
+                }
+                
+                // === Методические материалы ===
+                if (data.methodical_materials && data.methodical_materials.length > 0) {
+                    let content = '';
+                    data.methodical_materials.forEach((item, idx) => {
+                        let name = item.discipline_name || '';
+                        let code = item.discipline_code || '';
+                        content += `<div class="item-row">
+                            <span class="item-number">${idx + 1}.</span> ${escapeHtml(name)} 
+                            <span class="item-badge">${escapeHtml(code)}</span>
+                        </div>`;
+                    });
+                    html += createAccordionSection('Методические материалы (' + data.methodical_materials.length + ') Отсутствует', content);
+                }
+                
+                html += '</div>';
                 resultContainer.innerHTML = html;
             }
             
-            window.toggle = function(id) {
+            // Функция для управления выпадающими списками
+            window.toggleSection = function(id, headerElement) {
                 var el = document.getElementById(id);
                 if (el) {
+                    var icon = headerElement.querySelector('.accordion-icon');
                     if (el.style.display === 'none' || el.style.display === '') {
                         el.style.display = 'block';
-                        var parent = el.previousElementSibling;
-                        var icon = parent.querySelector('span:last-child');
                         if (icon) icon.innerHTML = '▲';
                     } else {
                         el.style.display = 'none';
-                        var parent = el.previousElementSibling;
-                        var icon = parent.querySelector('span:last-child');
                         if (icon) icon.innerHTML = '▼';
                     }
                 }
@@ -295,7 +234,7 @@
                     displayResult(parsedData);
                 } else {
                     showError('Результаты не найдены');
-                    resultContainer.innerHTML = '<div style="background: #f5f5f5; padding: 15px;">Вернитесь на главную страницу и отправьте данные заново</div>';
+                    resultContainer.innerHTML = '<div class="no-data">Вернитесь на главную страницу и отправьте данные заново</div>';
                 }
             } catch(e) {
                 console.error('Ошибка:', e);
