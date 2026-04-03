@@ -25,6 +25,12 @@
                 <input type="text" id="urlInput" placeholder="https://example.com или любой адрес" autocomplete="off">
                 <button class="clearUrlBtn" id="clearUrlBtn">Очистить</button>
             </div>
+            <div class="conteiner" style="display: flex; align-items: center; gap: 15px;">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14pt;">
+                    <input type="checkbox" id="downloadFilesCheckbox" style="width: 18px; height: 18px; cursor: pointer;">
+                    <span>Скачать PDF и HTML версии результата</span>
+                </label>
+            </div>
             <div class="conteiner">
                 <button class="submitBtn" id="submitBtn">Отправить</button>
             </div>
@@ -45,6 +51,7 @@
             const clearUrlBtn = document.getElementById('clearUrlBtn');
             const submitBtn = document.getElementById('submitBtn');
             const outputContent = document.getElementById('outputContent');
+            const downloadFilesCheckbox = document.getElementById('downloadFilesCheckbox');
 
             fileInput.addEventListener('change', function(event) {
                 file = event.target.files[0];
@@ -79,7 +86,80 @@
                 window.location.href = 'page3_result.html';
             }
 
-            async function sendToServer(url, fileData) {
+            // Функция для скачивания файла
+            function downloadFile(content, filename, contentType) {
+                const blob = new Blob([content], { type: contentType });
+                const link = document.createElement('a');
+                const url = URL.createObjectURL(blob);
+                link.href = url;
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            }
+
+            // Функция для скачивания PDF и HTML с сервера
+            async function downloadResultFiles() {
+                try {
+                    const savedResult = localStorage.getItem('compareResult');
+                    if (!savedResult) {
+                        console.warn('Нет сохраненного результата для скачивания');
+                        return false;
+                    }
+
+                    const resultData = JSON.parse(savedResult);
+                    
+                    // Получаем уникальный идентификатор для файлов (например, время или название специальности)
+                    const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+                    const specialtyName = resultData.specialty ? resultData.specialty.replace(/[^a-zа-яё0-9]/gi, '_').substring(0, 50) : 'result';
+                    
+                    // Формируем запрос на получение PDF
+                    const pdfResponse = await fetch('http://127.0.0.1:8001/api/compare/pdf', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/pdf'
+                        },
+                        body: JSON.stringify(resultData)
+                    });
+                    
+                    if (pdfResponse.ok) {
+                        const pdfBlob = await pdfResponse.blob();
+                        const pdfUrl = URL.createObjectURL(pdfBlob);
+                        downloadFile(pdfBlob, `${specialtyName}_${timestamp}_result.pdf`, 'application/pdf');
+                        URL.revokeObjectURL(pdfUrl);
+                        console.log('PDF скачан успешно');
+                    } else {
+                        console.error('Ошибка при скачивании PDF:', pdfResponse.status);
+                    }
+                    
+                    // Формируем запрос на получение HTML
+                    const htmlResponse = await fetch('http://127.0.0.1:8001/api/compare/html', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'text/html'
+                        },
+                        body: JSON.stringify(resultData)
+                    });
+                    
+                    if (htmlResponse.ok) {
+                        const htmlContent = await htmlResponse.text();
+                        downloadFile(htmlContent, `${specialtyName}_${timestamp}_result.html`, 'text/html');
+                        console.log('HTML скачан успешно');
+                    } else {
+                        console.error('Ошибка при скачивании HTML:', htmlResponse.status);
+                    }
+                    
+                    return true;
+                } catch (error) {
+                    console.error('Ошибка при скачивании файлов результата:', error);
+                    return false;
+                }
+            }
+
+            async function sendToServer(url, fileData, shouldDownloadFiles) {
                 const formData = new FormData();    
                 
                 if (fileData) {
@@ -97,6 +177,7 @@
                 
                 console.log('Отправка запроса на:', apiUrl);
                 console.log('FormData содержимое:', formData);
+                console.log('Скачивать файлы:', shouldDownloadFiles);
                 
                 try {
                     const response = await fetch(apiUrl, {
@@ -150,6 +231,7 @@
             submitBtn.addEventListener('click', async function() {
                 let fileName = file ? file.name : 'Файл не выбран';
                 let currentUrl = urlInput.value.trim();
+                let shouldDownload = downloadFilesCheckbox.checked;
                 
                 if (!currentUrl) {
                     showError('Пожалуйста, укажите URL');
@@ -171,13 +253,35 @@
                 showLoading();
                 
                 try {
-                    const result = await sendToServer(currentUrl, file);
+                    const result = await sendToServer(currentUrl, file, shouldDownload);
                     
                     if (result) {
-                        showSuccess('Данные успешно отправлены! Перенаправление...');
-                        setTimeout(() => {
-                            showResult(result);
-                        }, 1000);
+                        // Сохраняем результат в localStorage для страницы результатов
+                        localStorage.setItem('compareResult', JSON.stringify(result));
+                        
+                        // Если пользователь выбрал скачивание файлов
+                        if (shouldDownload) {
+                            showSuccess('Данные успешно отправлены! Идет скачивание файлов результата...');
+                            
+                            // Небольшая задержка перед скачиванием
+                            setTimeout(async () => {
+                                const downloadSuccess = await downloadResultFiles();
+                                if (downloadSuccess) {
+                                    showSuccess('Данные успешно отправлены! Файлы PDF и HTML скачаны. Перенаправление...');
+                                } else {
+                                    showSuccess('Данные успешно отправлены! Но возникла ошибка при скачивании файлов. Перенаправление...');
+                                }
+                                
+                                setTimeout(() => {
+                                    window.location.href = 'page3_result.html';
+                                }, 1500);
+                            }, 500);
+                        } else {
+                            showSuccess('Данные успешно отправлены! Перенаправление...');
+                            setTimeout(() => {
+                                window.location.href = 'page3_result.html';
+                            }, 1000);
+                        }
                     } else {
                         throw new Error('Сервер вернул пустой результат');
                     }
