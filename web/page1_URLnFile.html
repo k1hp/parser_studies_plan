@@ -93,7 +93,7 @@
                 }
                 
                 const encodedUrl = encodeURIComponent(url.trim());
-                const apiUrl = `http://fastapi-service-analyze:8000/api/compare/json?url=${encodedUrl}`;
+                const apiUrl = `http://localhost:8000/api/compare/json?url=${encodedUrl}`;
                 
                 console.log('Отправка запроса на:', apiUrl);
                 console.log('FormData содержимое:', formData);
