@@ -7,6 +7,8 @@ body{
     display: flex;
     align-items: center;
     justify-content: center;
+    background: #f0f2f5;
+    min-height: 100vh;
 }
 header{
     padding: 15px;
@@ -27,6 +29,7 @@ header h1{
     padding: 5px;
     display: flex;
     align-items: center;
+    z-index: 1000;
 }
 .main img{
     height: 40px;
@@ -37,34 +40,232 @@ header h1{
 .right{
     display: flex;
     margin-left: auto;
+    gap: 10px;
+}
+.right a {
+    color: white;
+    text-decoration: none;
+    padding: 5px 10px;
 }
 
-
-p, input{
+p, input, button{
     font-size: 15pt;
 }
 .content{
-    background-color: black;
     margin-top: 100px;
     width: 780px;
-    background: rgba(255,255,255,0.96);
+    max-width: 90%;
+    background: rgba(255, 255, 255, 0.96);
     border-radius: 40px;
     border: 1px solid rgba(134, 134, 134, 0.5);
     font-family: monospace;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
 }
 
+/* Поле ввода URL */
+#urlInput {
+    flex: 1;
+    padding: 10px 15px;
+    font-size: 15pt;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
+
+/* Кнопка очистки */
+.clearUrlBtn {
+    padding: 10px 15px;
+    font-size: 14pt;
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.clearUrlBtn:hover {
+    background: #c82333;
+}
+/* Кнопка выбора файла */
+#fileInput::file-selector-button {
+    padding: 8px 15px;
+    background: #28a745;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14pt;
+}
+
+#fileInput::file-selector-button:hover {
+    background: #218838;
+}
 .conteiner{
     padding: 15px;
 }
-.clearUrlBtn{
-    padding: 5px;
-}
+
 .submitBtn{
     display: block;
-    padding: 5px;
+    padding: 10px 20px;
     font-size: 20pt;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+.submitBtn:hover{
+    background: #0056b3;
 }
 .outputArea{
     font-size: 15pt;
     padding: 15px;
+}
+.error{
+    color: red; 
+    padding: 10px; 
+    background: #ffeeee; 
+    border-radius: 5px; 
+    margin: 10px 0;
+}
+.success{
+    color: green;
+    padding: 10px;
+    background: #eeffee; 
+    border-radius: 5px; 
+    margin: 10px 0;
+}
+.loading{
+    color: blue; 
+    padding: 10px; 
+    background: #eeeeff; 
+    border-radius: 5px; 
+    margin: 10px 0;
+}
+
+/* Стили для результатов */
+.result-container {
+    padding: 10px;
+}
+
+/* Основная информация */
+.info-main, .info-sections {
+    background: #f5f5f5;
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+}
+
+.info-main h3, .info-sections h3 {
+    margin-top: 0;
+}
+
+.info-field {
+    margin: 8px 0;
+}
+
+.info-field strong {
+    font-weight: bold;
+}
+
+/* Секции-аккордеоны */
+.accordion-section {
+    background: #f0f0f0;
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 15px;
+}
+
+.accordion-header {
+    margin-top: 0;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.accordion-icon {
+    font-size: 20px;
+}
+
+.accordion-content {
+    margin-top: 15px;
+}
+
+/* Список элементов в секциях */
+.items-list {
+    list-style: none;
+    padding: 0;
+}
+
+.item-row {
+    border-bottom: 1px solid #ddd;
+    padding: 8px 0;
+}
+
+.item-number {
+    font-weight: bold;
+}
+
+.item-badge {
+    background: #ccc;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+    margin-left: 8px;
+}
+
+/* Сообщения */
+.error-message {
+    color: red;
+    margin-bottom: 15px;
+    display: none;
+}
+
+.no-data {
+    background: #f5f5f5;
+    padding: 15px;
+    text-align: center;
+    color: #999;
+}
+
+.json-preview {
+    background: #f5f5f5;
+    padding: 15px;
+    overflow-x: auto;
+}
+
+/* Кнопки в результатах */
+.result-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.info-data {
+    margin-top: 15px;
+    padding: 10px;
+    background: #f5f5f5;
+    border-radius: 5px;
+}
+
+.sent-data {
+    margin-top: 15px;
+    padding: 10px;
+    background: #f5f5f5;
+    border-radius: 5px;
+}
+
+.tips {
+    margin-top: 10px;
+    padding: 10px;
+    background: #fff3cd;
+    border-radius: 5px;
+}
+
+.tips code {
+    background: #e9ecef;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-family: monospace;
 }
