@@ -61,9 +61,8 @@ def analyze_many(report_format: REPORT_FORMATS, files: List[UploadFile]):
 
 app.include_router(router)
 origins = [
-    "http://localhost:8080",
+    "http://127.0.0.1:80",
     "http://127.0.0.1:8080",
-    "http://localhost:8000",
     "http://127.0.0.1:8000",
 ]
 
