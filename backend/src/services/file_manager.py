@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 from src.utils import applogger
 
 class FileManager:
@@ -19,21 +19,23 @@ class FileManager:
         except Exception as e:
             applogger.error(f"Не удалось прочитать файл {file_path}: {e}")
 
-    def get_files_in_directory(self, extension: tuple[str] = (".plx", ".xml")) -> list[str]:
-        if not os.path.exists(self.directory):
+    def get_files_in_directory(self, extension: tuple[str, ...] = (".plx", ".xml")) -> list[Path]:
+        directory = Path(self.directory)
+
+        if not directory.exists():
             applogger.error(f"Ошибка: директории {self.directory} не существует!")
             return []
 
         extensions = [extension]
 
-        files = []
-        for f in os.listdir(self.directory):
-            if any(f.endswith(ext) for ext in extensions):
-                files.append(os.path.join(self.directory, f))
+        files = [
+            f for f in directory.iterdir()
+            if f.is_file() and f.suffix in extensions
+        ]
 
         applogger.debug(f"Найдено файлов: {len(files)} в директории {self.directory}")
         if files:
             applogger.debug("Список файлов:")
-            applogger.debug("\n".join(f"- {os.path.basename(f)}" for f in files))
+            applogger.debug("\n".join(f"- {f.name}" for f in files))
 
         return files

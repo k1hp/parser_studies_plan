@@ -1,6 +1,5 @@
 from loguru import logger
 from src.schemas.xml_schemas import ResponseModel
-import sys
 
 class AppLogger:
     def __init__(self, level="INFO"):
@@ -10,7 +9,7 @@ class AppLogger:
             "<level>{level: <8}</level> | "
             "<cyan>{name}</cyan>:<cyan>{function}</cyan> - <level>{message}</level>"
         )
-        logger.add(sys.stdout, format=dev_format, level=level, colorize=True)
+        logger.add("sys.stdout", format=dev_format, level=level, colorize=True)
 
     def get_logger(self):
         return logger

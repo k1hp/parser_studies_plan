@@ -5,23 +5,19 @@ from src.services.xml_parsing_service import XmlParsingService
 from src.services.web_parsing_service import WebParsingService
 from src.utils import applogger
 from multipart import file_path
-import os
+from pathlib import Path
 from src.services.pdf_service import PDFService
 
 class AnalyzeService:
     def __init__(self, web_parser_service: WebParsingService, xml_parser_service: XmlParsingService):
         self.web_parser_service = web_parser_service
         self.xml_parser_service = xml_parser_service
-        # self.pdf_service = pdf_service
-        # self.file_manager = file_manager
 
     # 1. общая функция анализа
     def _compare_models(self, web_object: CurriculumModel, xml_object: ResponseModel) -> ApiResponseSchema:
         result: dict = {}
 
         for key, value in web_object.model_dump().items():
-            # if key == "speciality" and value == xml_object.direction_name:
-            #     result[key] = value
             if key == "discipline_code" and value == xml_object.direction_code:
                 result[key] = value
             elif isinstance(value, list) and len(value) > 0 and isinstance(value[0], dict):
@@ -30,7 +26,7 @@ class AnalyzeService:
 
             else:
                 result[key] = value
-                # raise ValueError(f"Unexpected value {value} of {key}")
+
             applogger.debug(f"result {result}")
         return ApiResponseSchema.model_validate(result)
 
@@ -62,13 +58,6 @@ class AnalyzeService:
 
         return pdf_bytes
 
-
-    # 3. по соответствию года сразу пачку
-    # def analyze_all(self, files: list[bytes]):
-    #     web_data = self.web_parser_service.parse_url(url)
-    #     web_data = self.extract_from_content(files[0])
-        # xml_data = self.xml_parser_service.extract_all_files(files)
-
     def _compare_lists(self, correct_list: list[DisciplineDetail], checking_list: list[DisciplineDetail]) -> list[DisciplineDetail] | list:
         result_list: list[str] = []
         for check in checking_list:
@@ -79,8 +68,6 @@ class AnalyzeService:
 
             if not flag:
                 result_list.append(correct)
-            # if correct.discipline_name not in "".join(el.to_string for el in checking_list):
-            #     result_list.append(correct.to_string)
 
         return result_list
 
@@ -106,15 +93,14 @@ if __name__ == "__main__":
     print(res)
 
     target_url = WebParsingService().parse_url
-    current_script_dir = os.path.dirname(os.path.abspath(__file__))
-    file_path = os.path.abspath(os.path.join(current_script_dir, "..", "directory", "example.plx"))
+    current_script_dir = Path(__file__).resolve().parent
+    file_path = current_script_dir.parent / "directory" / "example.plx"
+
     try:
         analytic_results = service.analyze_one(target_url, file_path)
         pdf_bytes = service.pdf_service.create_pdf(analytic_results, 'report.pdf')
     except Exception as e:
         applogger.error(f"Произошла ошибка: {e}")
-    #result = service.analyze_one(url, file_path=file_path))
-    #pdf_bytes = service.analyze_one_and_create_report(url, file_path, "output/report.pdf")
 
 
 

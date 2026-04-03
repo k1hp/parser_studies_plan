@@ -1,9 +1,7 @@
 from datetime import datetime
-import os
 import xml.etree.ElementTree as ET
 import re
 from pathlib import Path
-
 from src.utils import applogger
 from src.schemas.xml_schemas import ResponseModel, DisciplineDetail
 from src.schemas.web_schemas import CurriculumModel
@@ -200,12 +198,8 @@ class WebParsingService:
             "curriculum_plan": True
         })
 
-
-
 if __name__ == "__main__":
     pdf_service = PDFService(template_dir="../templates")
-    current_script_dir = os.path.dirname(os.path.abspath(__file__))
-    # folder_path = os.path.abspath(os.path.join(current_script_dir, "..", "directory"))
     folder_path = str(Path.home() / "Downloads")
     file_manager = FileManager(folder_path)
     extractor = XmlParsingService(pdf_service=pdf_service)
@@ -220,7 +214,7 @@ if __name__ == "__main__":
             response = extractor.extract_from_content(content)
 
             if response:
-                base_name = os.path.splitext(os.path.basename(file_path))[0]
+                base_name = Path(file_path).stem
 
                 pdf_file_name = f"report_{base_name}.pdf"
 
@@ -229,11 +223,6 @@ if __name__ == "__main__":
                     f.write(pdf_bytes)
 
                 applogger.info(f"PDF сохранен: {pdf_file_name} (из файла {file_path})")
-
-            #applogger.debug("\nJSON представление:")
-            #applogger.debug(response.model_dump_json(indent=2, ensure_ascii=False))
-
-        #pdf_content = pdf_service.create_pdf(extracted_items)
 
     else:
         applogger.info(f"Файлы не найдены в директории: {folder_path}")

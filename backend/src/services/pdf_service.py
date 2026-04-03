@@ -36,12 +36,6 @@ class PDFService:
         return html_out
 
     def create_pdf(self, data: ApiResponseSchema, output_path: str = None) -> bytes:
-        # if isinstance(data, list):
-            # template = self.env.get_template('comparison_template.html')
-            # html_out = template.render(errors=data)
-        # else:
-
-
         return HTML(string=self._render(data, output_path)).write_pdf(target=output_path)
 
     def create_html(self, data: ApiResponseSchema, output_path: str = None) -> bytes:
