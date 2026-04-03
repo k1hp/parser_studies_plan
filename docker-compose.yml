@@ -1,20 +1,4 @@
 services:
-  web-server:
-    image: httpd:2.4
-    container_name: apache
-    ports:
-      - "80:80"
-    networks:
-      - server-network
-    volumes:
-      - ./web/:/usr/local/apache2/htdocs/:ro
-    restart: unless-stopped
-    healthcheck:
-      test: [ "CMD", "httpd", "-t" ]
-      interval: 10s
-      timeout: 15s
-      retries: 3
-
 
   fastapi-service-analyze:
     build:
@@ -25,15 +9,15 @@ services:
       - "8000:8000"
 #    env_file:
 #      - .env
-    networks:
-      - server-network
-    volumes: # убрать для ci cd
-      - ./backend/src:/fastapi-service/src  # для горячей перезагрузки при разработке
-    depends_on:
-      web-server:
-        condition: service_healthy
-    restart: unless-stopped
+#    volumes: # убрать для ci cd
+#      - ./backend/src:/fastapi-service/src  # для горячей перезагрузки при разработке
 
-networks:
-  server-network:
-    driver: bridge
+  frontend:
+    build: ./web
+    ports:
+      - "8080:80"
+    depends_on:
+      - fastapi-service-analyze
+
+
+
