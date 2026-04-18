@@ -11,8 +11,8 @@ services:
 #      - "8000:8000"
 #    env_file:
 #      - .env
-    volumes: # убрать для ci cd
-      - ./backend/src:/fastapi-service/src  # для горячей перезагрузки при разработке
+#    volumes: # убрать для ci cd
+#      - ./backend/src:/fastapi-service/src  # для горячей перезагрузки при разработке
 
   nginx:
     build:
