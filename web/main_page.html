@@ -115,7 +115,7 @@
                     const specialtyName = resultData.specialty ? resultData.specialty.replace(/[^a-zа-яё0-9]/gi, '_').substring(0, 50) : 'result';
                     
                     // Формируем запрос на получение PDF
-                    const pdfResponse = await fetch('http://127.0.0.1:8001/api/compare/pdf', {
+                    const pdfResponse = await fetch('/api/compare/pdf', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -135,7 +135,7 @@
                     }
                     
                     // Формируем запрос на получение HTML
-                    const htmlResponse = await fetch('http://127.0.0.1:8001/api/compare/html', {
+                    const htmlResponse = await fetch('/api/compare/html', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -173,7 +173,7 @@
                 }
                 
                 const encodedUrl = encodeURIComponent(url.trim());
-                const apiUrl = `http://localhost:8000/api/compare/json?url=${encodedUrl}`;
+                const apiUrl = `/api/compare/json?url=${encodedUrl}`;
                 
                 console.log('Отправка запроса на:', apiUrl);
                 console.log('FormData содержимое:', formData);
@@ -216,12 +216,12 @@
                     
                     if (error.message.includes('Failed to fetch')) {
                         detailedError = 'Не удалось подключиться к серверу. Проверьте: \n' +
-                                      '1. Запущен ли сервер на http://127.0.0.1:8001\n' +
+                                      '1. Запущен ли сервер на http://127.0.0.1:8000\n' +
                                       '2. Нет ли блокировки CORS (запустите сервер с CORS middleware)\n' +
                                       '3. Правильный ли порт и адрес\n' +
                                       `Оригинальная ошибка: ${error.message}`;
                     } else if (error.message.includes('NetworkError')) {
-                        detailedError = 'Сетевая ошибка. Убедитесь, что сервер доступен по адресу http://127.0.0.1:8001';
+                        detailedError = 'Сетевая ошибка. Убедитесь, что сервер доступен по адресу http://127.0.0.1:8000';
                     }
                     
                     throw new Error(detailedError);
@@ -306,7 +306,7 @@
                         <div class="tips">
                             <strong>Советы по устранению проблемы:</strong><br>
                             1. Убедитесь, что сервер запущен: <code>python entypoint.py</code><br>
-                            2. Проверьте, что сервер слушает порт 8001<br>
+                            2. Проверьте, что сервер слушает порт 8000<br>
                             3. Добавьте CORS middleware в FastAPI приложение:<br>
                             <code>from fastapi.middleware.cors import CORSMiddleware</code><br>
                             <code>app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])</code><br>

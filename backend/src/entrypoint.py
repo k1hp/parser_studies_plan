@@ -12,7 +12,10 @@ from src.utils import applogger
 from src.services.pdf_service import PDFService
 
 
-app = FastAPI()
+app = FastAPI(
+    docs_url="/docs",
+    openapi_url="/docs/openapi.json"  # Обязательно добавьте этот префикс!
+)
 router = APIRouter(prefix="/api")
 
 REPORT_FORMATS = Literal["json", "html", "pdf"]
@@ -60,21 +63,21 @@ def analyze_many(report_format: REPORT_FORMATS, files: List[UploadFile]):
     ...
 
 app.include_router(router)
-origins = [
-    "http://127.0.0.1:80",
-    "http://127.0.0.1:8080",
-    "http://127.0.0.1:8000",
-]
-
-# CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=origins,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["*"]  # for file download
-)
+# origins = [
+#     "http://127.0.0.1:80",
+#     "http://127.0.0.1:8080",
+#     "http://127.0.0.1:8000",
+# ]
+#
+# # CORS
+# app.add_middleware(
+#     CORSMiddleware,
+#     allow_origins=origins,
+#     allow_credentials=True,
+#     allow_methods=["*"],
+#     allow_headers=["*"],
+#     expose_headers=["*"]  # for file download
+# )
 
 # if __name__ == "__main__":
 #
