@@ -79,7 +79,7 @@ class AnalyzeService:
         for correct in correct_list:
             flag = False
             for check in checking_list:
-                if correct.discipline_code == check.discipline_code or correct.discipline_name in check.discipline_name:
+                if correct.discipline_code in check.discipline_code or correct.discipline_name in check.discipline_name:
                     flag = True
                     break
 
