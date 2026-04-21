@@ -43,279 +43,223 @@
         </div>
         <footer></footer>
         <script>
-            let file = null;
-            let urlValue = "";
+    let file = null;
+    let urlValue = "";
 
-            const fileInput = document.getElementById('fileInput');  
-            const urlInput = document.getElementById('urlInput');    
-            const clearUrlBtn = document.getElementById('clearUrlBtn');
-            const submitBtn = document.getElementById('submitBtn');
-            const outputContent = document.getElementById('outputContent');
-            const downloadFilesCheckbox = document.getElementById('downloadFilesCheckbox');
+    const fileInput = document.getElementById('fileInput');
+    const urlInput = document.getElementById('urlInput');
+    const clearUrlBtn = document.getElementById('clearUrlBtn');
+    const submitBtn = document.getElementById('submitBtn');
+    const outputContent = document.getElementById('outputContent');
+    const downloadFilesCheckbox = document.getElementById('downloadFilesCheckbox');
 
-            fileInput.addEventListener('change', function(event) {
-                file = event.target.files[0];
-                console.log('Файл изменен:', file ? file.name : 'удален');
+    fileInput.addEventListener('change', function(event) {
+        file = event.target.files[0];
+    });
+
+    urlInput.addEventListener('input', function(event) {
+        urlValue = event.target.value;
+    });
+
+    clearUrlBtn.addEventListener('click', function() {
+        urlInput.value = '';
+        urlValue = '';
+    });
+
+    function showError(message) {
+        outputContent.innerHTML = `<div class="error" style="color: #d32f2f; padding: 12px; background: #ffebee; border-radius: 4px; border-left: 4px solid #d32f2f; margin: 10px 0;">
+            <strong>Ошибка:</strong> ${message}
+        </div>`;
+    }
+
+    function showSuccess(message) {
+        outputContent.innerHTML = `<div class="success" style="color: #2e7d32; padding: 12px; background: #e8f5e9; border-radius: 4px; border-left: 4px solid #2e7d32; margin: 10px 0;">
+            ${message}
+        </div>`;
+    }
+
+    function showLoading() {
+        outputContent.innerHTML = `<div class="loading" style="padding: 12px; background: #e3f2fd; border-radius: 4px;">
+            ⏳ Отправка данных на сервер...
+        </div>`;
+    }
+
+    function downloadFile(content, filename, contentType) {
+        const blob = new Blob([content], { type: contentType });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }
+
+    async function downloadResultFiles() {
+        try {
+            const savedResult = localStorage.getItem('compareResult');
+            if (!savedResult) {
+                return false;
+            }
+
+            const resultData = JSON.parse(savedResult);
+            const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+            const specialtyName = resultData.specialty ? resultData.specialty.replace(/[^a-zа-яё0-9]/gi, '_').substring(0, 50) : 'result';
+
+            const pdfResponse = await fetch('/api/compare/pdf', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/pdf'
+                },
+                body: JSON.stringify(resultData)
             });
 
-            urlInput.addEventListener('input', function(event) {
-                urlValue = event.target.value; 
-                console.log('URL изменен:', urlValue);
+            if (pdfResponse.ok) {
+                const pdfBlob = await pdfResponse.blob();
+                downloadFile(pdfBlob, `${specialtyName}_${timestamp}_result.pdf`, 'application/pdf');
+            } else {
+                throw new Error(`PDF: ${pdfResponse.status}`);
+            }
+
+            const htmlResponse = await fetch('/api/compare/html', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'text/html'
+                },
+                body: JSON.stringify(resultData)
             });
 
-            clearUrlBtn.addEventListener('click', function() {
-                urlInput.value = '';     
-                urlValue = '';           
-                console.log('URL очищен');
+            if (htmlResponse.ok) {
+                const htmlContent = await htmlResponse.text();
+                downloadFile(htmlContent, `${specialtyName}_${timestamp}_result.html`, 'text/html');
+            } else {
+                throw new Error(`HTML: ${htmlResponse.status}`);
+            }
+
+            return true;
+        } catch (error) {
+            console.error('Ошибка скачивания:', error);
+            showError(`Не удалось скачать файлы: ${error.message}`);
+            return false;
+        }
+    }
+
+    async function sendToServer(url, fileData) {
+        const formData = new FormData();
+
+        if (!fileData) {
+            throw new Error('Файл не выбран');
+        }
+
+        if (!url || url.trim() === '') {
+            throw new Error('URL не указан');
+        }
+
+        formData.append('file', fileData);
+        const encodedUrl = encodeURIComponent(url.trim());
+        const apiUrl = `/api/compare/json?url=${encodedUrl}`;
+
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            let errorMessage = `Ошибка ${response.status}`;
+            try {
+                const errorData = await response.json();
+                if (errorData.detail) {
+                    errorMessage = errorData.detail;
+                } else if (errorData.message) {
+                    errorMessage = errorData.message;
+                }
+            } catch (e) {
+                const textError = await response.text();
+                if (textError) {
+                    errorMessage = textError.substring(0, 200);
+                }
+            }
+
+            // Очищаем сообщение от скобок, кавычек и лишних символов
+            errorMessage = errorMessage
+                .replace(/^["']|["']$/g, '')
+                .replace(/[{}[\]"']/g, '')
+                .trim();
+
+            throw new Error(errorMessage);
+        }
+
+        return await response.json();
+    }
+
+    submitBtn.addEventListener('click', async function() {
+        const currentUrl = urlInput.value.trim();
+        const shouldDownload = downloadFilesCheckbox.checked;
+
+        if (!currentUrl) {
+            showError('Укажите URL адрес');
+            return;
+        }
+
+        if (!file) {
+            showError('Выберите файл для загрузки');
+            return;
+        }
+
+        if (file.size > 50 * 1024 * 1024) {
+            showError('Файл превышает 50 МБ');
+            return;
+        }
+
+        showLoading();
+
+        try {
+            const result = await sendToServer(currentUrl, file);
+
+            if (!result) {
+                throw new Error('Сервер не вернул данных');
+            }
+
+            localStorage.setItem('compareResult', JSON.stringify(result));
+
+            if (shouldDownload) {
+                showSuccess('Анализ выполнен. Скачивание файлов...');
+                await downloadResultFiles();
+                setTimeout(() => {
+                    window.location.href = 'page3_result.html';
+                }, 1000);
+            } else {
+                showSuccess('Анализ выполнен успешно');
+                setTimeout(() => {
+                    window.location.href = 'page3_result.html';
+                }, 500);
+            }
+
+        } catch (error) {
+            let errorMessage = error.message;
+
+            // Дополнительная очистка от скобок и кавычек
+            errorMessage = errorMessage
+                .replace(/^["']|["']$/g, '')
+                .replace(/[{}[\]"']/g, '')
+                .trim();
+
+            showError(errorMessage);
+
+            // Технические детали только в консоль
+            console.error('Детали ошибки:', {
+                url: currentUrl,
+                file: file ? file.name : null,
+                error: error.message
             });
-
-            function showError(message) {
-                outputContent.innerHTML = `<div class="error">Ошибка: ${message}</div>`;
-            }
-            
-            function showSuccess(message) {
-                outputContent.innerHTML = `<div class="success">${message}</div>`;
-            }
-            
-            function showLoading() {
-                outputContent.innerHTML = `<div class="loading">Отправка данных на сервер...</div>`;
-            }
-            
-            function showResult(data) {
-                localStorage.setItem('compareResult', JSON.stringify(data));
-                window.location.href = 'page3_result.html';
-            }
-
-            // Функция для скачивания файла
-            function downloadFile(content, filename, contentType) {
-                const blob = new Blob([content], { type: contentType });
-                const link = document.createElement('a');
-                const url = URL.createObjectURL(blob);
-                link.href = url;
-                link.download = filename;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(url);
-            }
-
-            // Функция для скачивания PDF и HTML с сервера
-            async function downloadResultFiles() {
-                try {
-                    const savedResult = localStorage.getItem('compareResult');
-                    if (!savedResult) {
-                        console.warn('Нет сохраненного результата для скачивания');
-                        return false;
-                    }
-
-                    const resultData = JSON.parse(savedResult);
-                    
-                    // Получаем уникальный идентификатор для файлов (например, время или название специальности)
-                    const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
-                    const specialtyName = resultData.specialty ? resultData.specialty.replace(/[^a-zа-яё0-9]/gi, '_').substring(0, 50) : 'result';
-                    
-                    // Формируем запрос на получение PDF
-                    const pdfResponse = await fetch('/api/compare/pdf', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/pdf'
-                        },
-                        body: JSON.stringify(resultData)
-                    });
-                    
-                    if (pdfResponse.ok) {
-                        const pdfBlob = await pdfResponse.blob();
-                        const pdfUrl = URL.createObjectURL(pdfBlob);
-                        downloadFile(pdfBlob, `${specialtyName}_${timestamp}_result.pdf`, 'application/pdf');
-                        URL.revokeObjectURL(pdfUrl);
-                        console.log('PDF скачан успешно');
-                    } else {
-                        console.error('Ошибка при скачивании PDF:', pdfResponse.status);
-                    }
-                    
-                    // Формируем запрос на получение HTML
-                    const htmlResponse = await fetch('/api/compare/html', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'text/html'
-                        },
-                        body: JSON.stringify(resultData)
-                    });
-                    
-                    if (htmlResponse.ok) {
-                        const htmlContent = await htmlResponse.text();
-                        downloadFile(htmlContent, `${specialtyName}_${timestamp}_result.html`, 'text/html');
-                        console.log('HTML скачан успешно');
-                    } else {
-                        console.error('Ошибка при скачивании HTML:', htmlResponse.status);
-                    }
-                    
-                    return true;
-                } catch (error) {
-                    console.error('Ошибка при скачивании файлов результата:', error);
-                    return false;
-                }
-            }
-
-            async function sendToServer(url, fileData, shouldDownloadFiles) {
-                const formData = new FormData();    
-                
-                if (fileData) {
-                    formData.append('file', fileData);
-                } else {
-                    throw new Error('Файл не выбран');
-                }
-                
-                if (!url || url.trim() === '') {
-                    throw new Error('URL не указан');
-                }
-                
-                const encodedUrl = encodeURIComponent(url.trim());
-                const apiUrl = `/api/compare/json?url=${encodedUrl}`;
-                
-                console.log('Отправка запроса на:', apiUrl);
-                console.log('FormData содержимое:', formData);
-                console.log('Скачивать файлы:', shouldDownloadFiles);
-                
-                try {
-                    const response = await fetch(apiUrl, {
-                        method: 'POST',
-                        body: formData,
-                        mode: 'cors',
-                        credentials: 'omit',
-                        headers: {
-                            'Accept': 'application/json'
-                        }
-                    });
-                    
-                    console.log('Статус ответа:', response.status);
-                    console.log('Заголовки ответа:', response.headers);
-                    
-                    if (!response.ok) {
-                        let errorMessage = `HTTP ошибка! статус: ${response.status}`;
-                        try {
-                            const errorData = await response.text();
-                            console.error('Тело ошибки:', errorData);
-                            errorMessage += `, детали: ${errorData.substring(0, 200)}`;
-                        } catch (e) {
-                            console.error('Не удалось прочитать тело ошибки:', e);
-                        }
-                        throw new Error(errorMessage);
-                    }
-                    
-                    const result = await response.json();
-                    console.log('Ответ сервера:', result);
-                    return result;
-                    
-                } catch (error) {
-                    console.error('Ошибка при отправке запроса:', error);
-                    
-                    let detailedError = error.message;
-                    
-                    if (error.message.includes('Failed to fetch')) {
-                        detailedError = 'Не удалось подключиться к серверу. Проверьте: \n' +
-                                      '1. Запущен ли сервер на http://127.0.0.1:8000\n' +
-                                      '2. Нет ли блокировки CORS (запустите сервер с CORS middleware)\n' +
-                                      '3. Правильный ли порт и адрес\n' +
-                                      `Оригинальная ошибка: ${error.message}`;
-                    } else if (error.message.includes('NetworkError')) {
-                        detailedError = 'Сетевая ошибка. Убедитесь, что сервер доступен по адресу http://127.0.0.1:8000';
-                    }
-                    
-                    throw new Error(detailedError);
-                }
-            }
-
-            submitBtn.addEventListener('click', async function() {
-                let fileName = file ? file.name : 'Файл не выбран';
-                let currentUrl = urlInput.value.trim();
-                let shouldDownload = downloadFilesCheckbox.checked;
-                
-                if (!currentUrl) {
-                    showError('Пожалуйста, укажите URL');
-                    outputContent.innerHTML += `<div class="info-data">URL: не указан<br>Название файла: ${fileName}</div>`;
-                    return;
-                }
-                
-                if (!file) {
-                    showError('Пожалуйста, выберите файл');
-                    outputContent.innerHTML += `<div class="info-data">URL: ${currentUrl}<br>Файл не выбран</div>`;
-                    return;
-                }
-                
-                if (file.size > 50 * 1024 * 1024) {
-                    showError('Файл слишком большой. Максимальный размер 50 МБ');
-                    return;
-                }
-                
-                showLoading();
-                
-                try {
-                    const result = await sendToServer(currentUrl, file, shouldDownload);
-                    
-                    if (result) {
-                        // Сохраняем результат в localStorage для страницы результатов
-                        localStorage.setItem('compareResult', JSON.stringify(result));
-                        
-                        // Если пользователь выбрал скачивание файлов
-                        if (shouldDownload) {
-                            showSuccess('Данные успешно отправлены! Идет скачивание файлов результата...');
-                            
-                            // Небольшая задержка перед скачиванием
-                            setTimeout(async () => {
-                                const downloadSuccess = await downloadResultFiles();
-                                if (downloadSuccess) {
-                                    showSuccess('Данные успешно отправлены! Файлы PDF и HTML скачаны. Перенаправление...');
-                                } else {
-                                    showSuccess('Данные успешно отправлены! Но возникла ошибка при скачивании файлов. Перенаправление...');
-                                }
-                                
-                                setTimeout(() => {
-                                    window.location.href = 'page3_result.html';
-                                }, 1500);
-                            }, 500);
-                        } else {
-                            showSuccess('Данные успешно отправлены! Перенаправление...');
-                            setTimeout(() => {
-                                window.location.href = 'page3_result.html';
-                            }, 1000);
-                        }
-                    } else {
-                        throw new Error('Сервер вернул пустой результат');
-                    }
-                    
-                } catch (error) {
-                    showError(error.message);
-                    
-                    console.error('Детали ошибки:', {
-                        url: currentUrl,
-                        file: file ? { name: file.name, size: file.size, type: file.type } : null,
-                        error: error,
-                        errorStack: error.stack
-                    });
-                    
-                    outputContent.innerHTML += `
-                        <div class="sent-data">
-                            <strong>Отправленные данные:</strong><br>
-                            URL: ${currentUrl}<br>
-                            Файл: ${fileName}<br>
-                            Размер файла: ${(file.size / 1024).toFixed(2)} КБ
-                        </div>
-                        <div class="tips">
-                            <strong>Советы по устранению проблемы:</strong><br>
-                            1. Убедитесь, что сервер запущен: <code>python entypoint.py</code><br>
-                            2. Проверьте, что сервер слушает порт 8000<br>
-                            3. Добавьте CORS middleware в FastAPI приложение:<br>
-                            <code>from fastapi.middleware.cors import CORSMiddleware</code><br>
-                            <code>app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])</code><br>
-                            4. Проверьте, что URL корректен и доступен<br>
-                            5. Проверьте, что прикрепленный файл корректен
-                        </div>
-                    `;
-                }
-            });
-        </script>
+        }
+    });
+</script>
     </body>
 </html>
