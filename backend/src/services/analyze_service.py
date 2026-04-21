@@ -6,7 +6,9 @@ from src.services.web_parsing_service import WebParsingService
 from src.utils import applogger
 from multipart import file_path
 import os
+from fastapi import HTTPException
 from src.services.pdf_service import PDFService
+
 
 class AnalyzeService:
     def __init__(self, web_parser_service: WebParsingService, xml_parser_service: XmlParsingService):
@@ -24,7 +26,7 @@ class AnalyzeService:
             #     result[key] = value
             if key == "discipline_code" and value != xml_object.direction_code:
                 # result[key] = value
-                raise ValueError("Группы не соответствуют в файле и ссылке")
+                raise HTTPException(400, "Группы не соответствуют в файле и ссылке на сайт")
             elif isinstance(value, list) and len(value) > 0 and isinstance(value[0], dict):
                 applogger.debug(f"type {type(value)} and {type(value[0])}")
                 result[key] = self._compare_lists(xml_object.disciplines, [DisciplineDetail(**el) for el in value])
@@ -49,7 +51,7 @@ class AnalyzeService:
                 web_model = model
                 break
         if web_model is None:
-            raise ValueError(f"Отсутствует модель web по году {xml_data.start_year}")
+            raise HTTPException(400, f"Отсутствует модель web по году {xml_data.start_year}")
 
         return self._compare_models(web_model, xml_data)
 
