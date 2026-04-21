@@ -27,8 +27,8 @@ async def analyze(url: str, report_format: REPORT_FORMATS, file: UploadFile = Fi
     # TODO валидация url
     content = await file.read()
     applogger.debug(f"Analyzing {url}")
-    applogger.debug(type(content))
-    applogger.debug(content)
+    # applogger.debug(type(content))
+    # applogger.debug(content)
     response: ApiResponseSchema = analyze_service.analyze_one(url, content)
     if report_format == "json":
         return response

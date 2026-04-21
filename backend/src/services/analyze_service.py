@@ -22,8 +22,9 @@ class AnalyzeService:
         for key, value in web_object.model_dump().items():
             # if key == "speciality" and value == xml_object.direction_name:
             #     result[key] = value
-            if key == "discipline_code" and value == xml_object.direction_code:
-                result[key] = value
+            if key == "discipline_code" and value != xml_object.direction_code:
+                # result[key] = value
+                raise ValueError("Группы не соответствуют в файле и ссылке")
             elif isinstance(value, list) and len(value) > 0 and isinstance(value[0], dict):
                 applogger.debug(f"type {type(value)} and {type(value[0])}")
                 result[key] = self._compare_lists(xml_object.disciplines, [DisciplineDetail(**el) for el in value])
@@ -70,12 +71,17 @@ class AnalyzeService:
         # xml_data = self.xml_parser_service.extract_all_files(files)
 
     def _compare_lists(self, correct_list: list[DisciplineDetail], checking_list: list[DisciplineDetail]) -> list[DisciplineDetail] | list:
-        result_list: list[str] = []
-        for check in checking_list:
+        result_list: list = []
+        # applogger.debug(f"checking list")
+        # applogger.debug(*(f"{el.to_tuple}\n" for el in checking_list))
+        # applogger.debug(f"correct list")
+        # applogger.debug(*(f"{el.to_tuple}\n" for el in correct_list))
+        for correct in correct_list:
             flag = False
-            for correct in correct_list:
-                if correct.discipline_code == check.discipline_code:
+            for check in checking_list:
+                if correct.discipline_code == check.discipline_code or correct.discipline_name in check.discipline_name:
                     flag = True
+                    break
 
             if not flag:
                 result_list.append(correct)

@@ -8,6 +8,7 @@ from bs4.element import Tag
 
 from src.schemas.web_schemas import CurriculumModel
 from src.logger import print_results_as_logging
+from src.utils import applogger
 
 # from ...schemas.web_schemas import CurriculumModel, DisciplineDetail
 
@@ -41,8 +42,7 @@ class WebParsingService:
             logger.error(f"Request error: {e}")
             return []
         
-      soup = BeautifulSoup(response.text, "html.parser")
-        # ... остальной код без изменений
+
       soup = BeautifulSoup(response.text, "html.parser")
       logger.info("Page loaded, length=%s", len(response.text))
 
@@ -59,8 +59,18 @@ class WebParsingService:
 
       discipline_code = match.group(1) if match else ""
       specialty = match.group(2) if match else h1_text
-      years = [year.strip() for year in match.group(3).split(',')] if match else []
 
+      # парсинг годов
+      years_after_priem = re.findall(r'приём\s+([\d,\s]+?)(?:\)|/)', h1_text)
+      all_years = []
+      for years_group in years_after_priem:
+          # Разбить по запятым и извлечь года
+          years = re.findall(r'\b\d{4}\b', years_group)
+          all_years.extend(years)
+
+      # all_years = [year.strip() for year in match.group(3).split(',')] if match else []
+
+      applogger.debug(f"all_years: {all_years}")
       # Инициализация результатов
       result_by_year = {year: {
           "specialty": specialty,
@@ -78,7 +88,7 @@ class WebParsingService:
           "fos_materials": [],
           "practic_programs": [],
           "methodical_materials": []
-      } for year in years}
+      } for year in all_years}
 
       desc_divs = main_div.find_all('div', class_='desc')
 
@@ -164,22 +174,22 @@ class WebParsingService:
           if div_id:
               # Обработка разделов-индикаторов
               if div_id == 'op':
-                  for year in years:
+                  for year in all_years:
                       result_by_year[year]['education_program'] = True
               elif div_id == 'kug':
-                  for year in years:
+                  for year in all_years:
                       result_by_year[year]['calendar_graphic'] = True
               elif div_id == 'up':
-                  for year in years:
+                  for year in all_years:
                       result_by_year[year]['education_plan'] = True
               elif div_id == 'gia':
-                  for year in years:
+                  for year in all_years:
                       result_by_year[year]['gia_program'] = True
               elif div_id == 'rpv':
-                  for year in years:
+                  for year in all_years:
                       result_by_year[year]['education_program_vosp'] = True
               elif div_id == 'pvr':
-                  for year in years:
+                  for year in all_years:
                       result_by_year[year]['curriculum_plan'] = True
               # Обработка разделов с содержимым
               elif div_id == 'rpd':
@@ -203,7 +213,7 @@ class WebParsingService:
                   else:
                       next_div = div.find_next_sibling('div', class_='desc', id=False)
                       lvl_value = next_div.get_text(strip=True) if next_div else ""
-                  for year in years:
+                  for year in all_years:
                       result_by_year[year]['lvl_education'] = lvl_value
               if 'Форма обучения' in text:
                   p_tags = div.find_all('p')
@@ -212,12 +222,12 @@ class WebParsingService:
                   else:
                       next_div = div.find_next_sibling('div', class_='desc', id=False)
                       form_value = next_div.get_text(strip=True) if next_div else ""
-                  for year in years:
+                  for year in all_years:
                       result_by_year[year]['form_education'] = form_value
 
-      results = [result_by_year[year] for year in years]
+      results = [result_by_year[year] for year in all_years]
 
-      logger.info("Parsed %d years", len(results))
+      logger.info("Parsed %d all_years", len(results))
       for result in results:
           logger.info("  Year %s: %d working programs, %d FOS, %d practic, %d methodical",
                       result['curriculum_year'],
