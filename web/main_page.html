@@ -2,7 +2,7 @@
 <html>
     <head>
         <meta charset="UTF-8">
-        <title>Сравнивание файлов и данных</title>
+        <title>Сравнение файлов и данных</title>
         <link rel="stylesheet" href="css/global.css">
     </head>
     <body>
@@ -18,7 +18,7 @@
                 <p>Вставьте файл с учебным планом и ссылку страницы с данными</p>
             </header>
             <div class="conteiner">
-                <p>Поддерживаются любые форматы (max. 50 МБ)</p>
+                <p>Поддерживаются форматы .plx и .xml</p>
                 <input type="file" id="fileInput" accept="*/*">
             </div>
             <div class="conteiner">
@@ -140,8 +140,8 @@
             return;
         }
 
-        if (file.size > 50 * 1024 * 1024) {
-            showError('Файл превышает 50 МБ');
+        if (file.size > 10 * 1024 * 1024) {
+            showError('Файл превышает 10 МБ');
             return;
         }
 
