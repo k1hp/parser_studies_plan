@@ -8,7 +8,6 @@
     <body>
         <header class="main">
             <a href="https://mauniver.ru/" ><img class="head" src="pic/logo.PNG" alt="Главная страница"></a>
-            
         </header>
         <div class="content">
             <header>
@@ -20,19 +19,20 @@
             </div>
             <div class="conteiner result-buttons">
                 <button class="submitBtn" onclick="window.location.href = 'page1_URLnFile.html'">Назад к форме</button>
-                <button class="submitBtn" onclick="location.reload()" style="margin-left: 10px;">Обновить</button>
+                <button class="submitBtn" onclick="downloadReport('pdf')" style="margin-left: 10px;">📄 Скачать PDF</button>
+                <button class="submitBtn" onclick="downloadReport('html')" style="margin-left: 10px;">🌐 Скачать HTML</button>
             </div>
         </div>
         <script>
             const resultContainer = document.getElementById('resultContent');
             const errorMessageDiv = document.getElementById('errorMessage');
-            
+
             function showError(message) {
                 errorMessageDiv.style.display = 'block';
                 errorMessageDiv.innerHTML = 'Ошибка: ' + message;
                 resultContainer.innerHTML = '';
             }
-            
+
             function escapeHtml(text) {
                 if (!text) return '';
                 return String(text).replace(/[&<>]/g, function(m) {
@@ -42,7 +42,7 @@
                     return m;
                 });
             }
-            
+
             function formatValue(value) {
                 if (typeof value === 'boolean') {
                     return value ? '✓ Есть' : '✗ Нет';
@@ -69,7 +69,7 @@
                 }
                 return escapeHtml(String(value));
             }
-            
+
             function formatFieldName(key) {
                 const names = {
                     'specialty': 'Специальность',
@@ -90,12 +90,11 @@
                 };
                 return names[key] || key.replace(/_/g, ' ');
             }
-            
-            // Функция для создания выпадающего блока
+
             function createAccordionSection(title, content, isOpen = false) {
                 let uniqueId = 'section_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8);
                 let displayStyle = isOpen ? 'block' : 'none';
-                
+
                 return `
                     <div class="accordion-section">
                         <h3 class="accordion-header" onclick="toggleSection('${uniqueId}', this)">
@@ -108,14 +107,13 @@
                     </div>
                 `;
             }
-            
-            // Основная функция отображения
+
             function displayResult(data) {
                 if (!data) {
                     showError('Нет данных для отображения');
                     return;
                 }
-                
+
                 if (typeof data === 'string') {
                     try {
                         data = JSON.parse(data);
@@ -124,13 +122,13 @@
                         return;
                     }
                 }
-                
+
                 let html = '<div class="result-container">';
-                
-                // === Основная информация ===
+
+                // Основная информация
                 let mainInfo = '<div class="info-main">';
                 mainInfo += '<h3>Основная информация</h3>';
-                
+
                 const mainFields = ['specialty', 'discipline_code', 'curriculum_year', 'lvl_education', 'form_education'];
                 for (const field of mainFields) {
                     if (data[field] !== undefined && data[field] !== null && data[field] !== '') {
@@ -139,11 +137,11 @@
                 }
                 mainInfo += '</div>';
                 html += mainInfo;
-                
-                // === Наличие разделов ===
+
+                // Наличие разделов
                 let sectionsInfo = '<div class="info-sections">';
                 sectionsInfo += '<h3>Наличие разделов в учебном плане</h3>';
-                
+
                 const sectionFields = ['education_program', 'calendar_graphic', 'education_plan', 'gia_program', 'education_program_vosp', 'curriculum_plan'];
                 for (const field of sectionFields) {
                     if (data[field] !== undefined) {
@@ -152,36 +150,36 @@
                 }
                 sectionsInfo += '</div>';
                 html += sectionsInfo;
-                
-                // === Рабочие программы дисциплин ===
+
+                // Рабочие программы
                 if (data.working_programs && data.working_programs.length > 0) {
                     let content = '';
                     data.working_programs.forEach((item, idx) => {
                         let name = item.discipline_name || '';
                         let code = item.discipline_code || '';
                         content += `<div class="item-row">
-                            <span class="item-number">${idx + 1}.</span> ${escapeHtml(name)} 
+                            <span class="item-number">${idx + 1}.</span> ${escapeHtml(name)}
                             <span class="item-badge">${escapeHtml(code)}</span>
                         </div>`;
                     });
-                    html += createAccordionSection('Рабочие программы дисциплин (' + data.working_programs.length + ') Отсутствует', content);
+                    html += createAccordionSection('Рабочие программы дисциплин (' + data.working_programs.length + ')', content);
                 }
-                
-                // === ФОС материалы ===
+
+                // ФОС материалы
                 if (data.fos_materials && data.fos_materials.length > 0) {
                     let content = '';
                     data.fos_materials.forEach((item, idx) => {
                         let name = item.discipline_name || '';
                         let code = item.discipline_code || '';
                         content += `<div class="item-row">
-                            <span class="item-number">${idx + 1}.</span> ${escapeHtml(name)} 
+                            <span class="item-number">${idx + 1}.</span> ${escapeHtml(name)}
                             <span class="item-badge">${escapeHtml(code)}</span>
                         </div>`;
                     });
-                    html += createAccordionSection('ФОС материалы (' + data.fos_materials.length + ') Отсутствует', content);
+                    html += createAccordionSection('ФОС материалы (' + data.fos_materials.length + ')', content);
                 }
-                
-                // === Программы практик ===
+
+                // Программы практик
                 if (data.practic_programs && data.practic_programs.length > 0) {
                     let content = '';
                     data.practic_programs.forEach((item, idx) => {
@@ -191,26 +189,25 @@
                     });
                     html += createAccordionSection('Программы практик (' + data.practic_programs.length + ')', content);
                 }
-                
-                // === Методические материалы ===
+
+                // Методические материалы
                 if (data.methodical_materials && data.methodical_materials.length > 0) {
                     let content = '';
                     data.methodical_materials.forEach((item, idx) => {
                         let name = item.discipline_name || '';
                         let code = item.discipline_code || '';
                         content += `<div class="item-row">
-                            <span class="item-number">${idx + 1}.</span> ${escapeHtml(name)} 
+                            <span class="item-number">${idx + 1}.</span> ${escapeHtml(name)}
                             <span class="item-badge">${escapeHtml(code)}</span>
                         </div>`;
                     });
-                    html += createAccordionSection('Методические материалы (' + data.methodical_materials.length + ') Отсутствует', content);
+                    html += createAccordionSection('Методические материалы (' + data.methodical_materials.length + ')', content);
                 }
-                
+
                 html += '</div>';
                 resultContainer.innerHTML = html;
             }
-            
-            // Функция для управления выпадающими списками
+
             window.toggleSection = function(id, headerElement) {
                 var el = document.getElementById(id);
                 if (el) {
@@ -224,8 +221,78 @@
                     }
                 }
             };
-            
-            // Загрузка результата
+
+            // Функция скачивания отчета
+            window.downloadReport = async function(format) {
+                const button = event.target;
+                const originalText = button.innerText;
+
+                try {
+                    // Получаем JSON результат из localStorage
+                    const savedResult = localStorage.getItem('compareResult');
+                    if (!savedResult) {
+                        alert('Результат не найден. Пожалуйста, выполните сравнение заново.');
+                        return;
+                    }
+
+                    const resultData = JSON.parse(savedResult);
+
+                    // Меняем текст кнопки
+                    button.disabled = true;
+                    button.innerText = format === 'pdf' ? '⏳ Генерация PDF...' : '⏳ Генерация HTML...';
+
+                    // Отправляем JSON на соответствующий эндпоинт
+                    const endpoint = format === 'pdf' ? '/api/convert/pdf' : '/api/convert/html';
+
+                    console.log(`Отправка JSON на ${endpoint}`);
+
+                    const response = await fetch(endpoint, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(resultData)
+                    });
+
+                    if (!response.ok) {
+                        let errorText = '';
+                        try {
+                            const errorData = await response.json();
+                            errorText = JSON.stringify(errorData);
+                        } catch (e) {
+                            errorText = await response.text();
+                        }
+                        throw new Error(`Ошибка ${response.status}: ${errorText.substring(0, 200)}`);
+                    }
+
+                    // Скачиваем полученный файл
+                    const blob = await response.blob();
+                    const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+                    const specialtyName = resultData.specialty ? resultData.specialty.replace(/[^a-zа-яё0-9]/gi, '_').substring(0, 50) : 'result';
+                    const filename = `${specialtyName}_${timestamp}_result.${format}`;
+
+                    const link = document.createElement('a');
+                    const url = URL.createObjectURL(blob);
+                    link.href = url;
+                    link.download = filename;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(url);
+
+                    alert(`✅ Файл ${format.toUpperCase()} успешно скачан!`);
+
+                } catch (error) {
+                    console.error('Ошибка при скачивании:', error);
+                    alert(`❌ Не удалось скачать файл ${format.toUpperCase()}:\n${error.message}`);
+                } finally {
+                    // Восстанавливаем кнопку
+                    button.disabled = false;
+                    button.innerText = originalText;
+                }
+            };
+
+            // Загрузка и отображение результата
             try {
                 var saved = localStorage.getItem('compareResult');
                 if (saved && saved !== 'undefined' && saved !== 'null') {

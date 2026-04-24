@@ -25,12 +25,6 @@
                 <input type="text" id="urlInput" placeholder="https://example.com или любой адрес" autocomplete="off">
                 <button class="clearUrlBtn" id="clearUrlBtn">Очистить</button>
             </div>
-            <div class="conteiner" style="display: flex; align-items: center; gap: 15px;">
-                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14pt;">
-                    <input type="checkbox" id="downloadFilesCheckbox" style="width: 18px; height: 18px; cursor: pointer;">
-                    <span>Скачать PDF и HTML версии результата</span>
-                </label>
-            </div>
             <div class="conteiner">
                 <button class="submitBtn" id="submitBtn">Отправить</button>
             </div>
@@ -39,7 +33,7 @@
                 <div id="outputContent">
                     <p>- здесь появится информация об отправленных данных -</p>
                 </div>
-            </div>      
+            </div>
         </div>
         <footer></footer>
         <script>
@@ -51,7 +45,6 @@
     const clearUrlBtn = document.getElementById('clearUrlBtn');
     const submitBtn = document.getElementById('submitBtn');
     const outputContent = document.getElementById('outputContent');
-    const downloadFilesCheckbox = document.getElementById('downloadFilesCheckbox');
 
     fileInput.addEventListener('change', function(event) {
         file = event.target.files[0];
@@ -82,69 +75,6 @@
         outputContent.innerHTML = `<div class="loading" style="padding: 12px; background: #e3f2fd; border-radius: 4px;">
             ⏳ Отправка данных на сервер...
         </div>`;
-    }
-
-    function downloadFile(content, filename, contentType) {
-        const blob = new Blob([content], { type: contentType });
-        const link = document.createElement('a');
-        const url = URL.createObjectURL(blob);
-        link.href = url;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-    }
-
-    async function downloadResultFiles() {
-        try {
-            const savedResult = localStorage.getItem('compareResult');
-            if (!savedResult) {
-                return false;
-            }
-
-            const resultData = JSON.parse(savedResult);
-            const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
-            const specialtyName = resultData.specialty ? resultData.specialty.replace(/[^a-zа-яё0-9]/gi, '_').substring(0, 50) : 'result';
-
-            const pdfResponse = await fetch('/api/compare/pdf', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/pdf'
-                },
-                body: JSON.stringify(resultData)
-            });
-
-            if (pdfResponse.ok) {
-                const pdfBlob = await pdfResponse.blob();
-                downloadFile(pdfBlob, `${specialtyName}_${timestamp}_result.pdf`, 'application/pdf');
-            } else {
-                throw new Error(`PDF: ${pdfResponse.status}`);
-            }
-
-            const htmlResponse = await fetch('/api/compare/html', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'text/html'
-                },
-                body: JSON.stringify(resultData)
-            });
-
-            if (htmlResponse.ok) {
-                const htmlContent = await htmlResponse.text();
-                downloadFile(htmlContent, `${specialtyName}_${timestamp}_result.html`, 'text/html');
-            } else {
-                throw new Error(`HTML: ${htmlResponse.status}`);
-            }
-
-            return true;
-        } catch (error) {
-            console.error('Ошибка скачивания:', error);
-            showError(`Не удалось скачать файлы: ${error.message}`);
-            return false;
-        }
     }
 
     async function sendToServer(url, fileData) {
@@ -186,7 +116,6 @@
                 }
             }
 
-            // Очищаем сообщение от скобок, кавычек и лишних символов
             errorMessage = errorMessage
                 .replace(/^["']|["']$/g, '')
                 .replace(/[{}[\]"']/g, '')
@@ -200,7 +129,6 @@
 
     submitBtn.addEventListener('click', async function() {
         const currentUrl = urlInput.value.trim();
-        const shouldDownload = downloadFilesCheckbox.checked;
 
         if (!currentUrl) {
             showError('Укажите URL адрес');
@@ -226,25 +154,18 @@
                 throw new Error('Сервер не вернул данных');
             }
 
+            // Сохраняем только JSON результат
             localStorage.setItem('compareResult', JSON.stringify(result));
 
-            if (shouldDownload) {
-                showSuccess('Анализ выполнен. Скачивание файлов...');
-                await downloadResultFiles();
-                setTimeout(() => {
-                    window.location.href = 'page3_result.html';
-                }, 1000);
-            } else {
-                showSuccess('Анализ выполнен успешно');
-                setTimeout(() => {
-                    window.location.href = 'page3_result.html';
-                }, 500);
-            }
+            showSuccess('Анализ выполнен успешно');
+
+            setTimeout(() => {
+                window.location.href = 'page3_result.html';
+            }, 500);
 
         } catch (error) {
             let errorMessage = error.message;
 
-            // Дополнительная очистка от скобок и кавычек
             errorMessage = errorMessage
                 .replace(/^["']|["']$/g, '')
                 .replace(/[{}[\]"']/g, '')
@@ -252,7 +173,6 @@
 
             showError(errorMessage);
 
-            // Технические детали только в консоль
             console.error('Детали ошибки:', {
                 url: currentUrl,
                 file: file ? file.name : null,
@@ -261,5 +181,6 @@
         }
     });
 </script>
+    
     </body>
 </html>

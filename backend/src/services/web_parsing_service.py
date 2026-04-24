@@ -40,7 +40,8 @@ class WebParsingService:
             return []
       except Exception as e:
             logger.error(f"Request error: {e}")
-            return []
+            from fastapi import HTTPException
+            raise HTTPException(status_code=400, detail="Ссылка указана неверно или ведет на неизвестный ресурс")
         
 
       soup = BeautifulSoup(response.text, "html.parser")
