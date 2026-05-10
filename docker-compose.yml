@@ -1,5 +1,4 @@
 services:
-
   fastapi-service-analyze:
     build:
       context: ./backend
@@ -7,24 +6,23 @@ services:
     networks:
       - server-network
     restart: always
-#    ports:
-#      - "8000:8000"
-#    env_file:
-#      - .env
-#    volumes: # убрать для ci cd
-#      - ./backend/src:/fastapi-service/src  # для горячей перезагрузки при разработке
+  #    ports:
+  #      - "8000:8000"
+  #    env_file:
+  #      - .env
+  #    volumes: # убрать для ci cd
+  #      - ./backend/src:/fastapi-service/src  # для горячей перезагрузки при разработке
 
   nginx:
     build:
       context: ./web
     container_name: nginx-proxy
     ports:
-      - "80:80"
+      - "8888:80"
     networks:
       - server-network
     depends_on:
       - fastapi-service-analyze
-
 
 networks:
   server-network:
