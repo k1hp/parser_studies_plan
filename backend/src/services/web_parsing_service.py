@@ -20,7 +20,7 @@ class WebParsingService:
 
     def __init__(self, curriculum_file: str = "plan.xml"):
         self.curriculum_file = curriculum_file
-        self.url: str = "https://mauniver.ru/sveden/education/op/43292#prak"  # грустно
+        self.url: str = "https://mauniver.ru/sveden/education/op/30823#prak"  # грустно
 
     def parse_by_year(self) -> list[Dict[str, Any]]:
       """Парсит данные с веб-страницы, извлекая информацию о направлениях подготовки, дисциплинах и связанных материалах, с учетом различных форматов представления данных и обеспечивающий устойчивость к изменениям структуры страницы. Возвращает список словарей с данными по каждому году приема."""
@@ -297,6 +297,6 @@ class WebParsingService:
     
 
 if __name__ == "__main__":
-    service = WebParsingService("https://mauniver.ru/sveden/education/op/55217#prak")
+    service = WebParsingService("https://mauniver.ru/sveden/education/op/30823#prak")
     results = service.parse_by_year()
     print_results_as_logging(results)

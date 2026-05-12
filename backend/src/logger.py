@@ -1,5 +1,5 @@
 import logging
-from typing import list, Dict, Any
+from typing import List, Dict, Any
 from src.schemas.web_schemas import CurriculumModel, DisciplineDetail
 
 logging.basicConfig(level=logging.INFO)
