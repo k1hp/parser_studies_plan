@@ -21,6 +21,9 @@ services:
       - "8888:80"
     networks:
       - server-network
+
+    volumes:
+      - ./web:/usr/share/nginx/html
     depends_on:
       - fastapi-service-analyze
 
