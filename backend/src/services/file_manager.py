@@ -1,13 +1,16 @@
 import os
+import io
 from src.utils import applogger
 
 try:
     from smb.SMBConnection import SMBConnection
     from smb.base import SharedFile
+
     SMB_AVAILABLE = True
 except ImportError:
     SMB_AVAILABLE = False
     applogger.warning("Библиотека pysmb не установлена. SMB функциональность недоступна.")
+
 
 class FileManager:
 
@@ -49,7 +52,6 @@ class FileManager:
 
 
 class SMBFileManager:
-
     def __init__(self, smb_path: str, username: str = None, password: str = None):
         if not SMB_AVAILABLE:
             raise ImportError("Для работы с SMB необходимо установить библиотеку pysmb: pip install pysmb")
@@ -87,7 +89,6 @@ class SMBFileManager:
         try:
             from smb.SMBConnection import SMBConnection
 
-            # Использование NetBIOS имен или localhost для клиента
             client_name = 'file_manager_client'
 
             self.connection = SMBConnection(
@@ -96,12 +97,11 @@ class SMBFileManager:
                 my_name=client_name,
                 remote_name=self.server,
                 use_ntlm_v2=True,
-                is_direct_tcp=False  # Использовать NetBIOS над TCP
+                is_direct_tcp=False
             )
 
             connected = self.connection.connect(self.server, 139)
             if not connected:
-                # Используем прямой TCP на порт 445
                 self.connection = SMBConnection(
                     username=self.username,
                     password=self.password,
@@ -135,7 +135,6 @@ class SMBFileManager:
             return []
 
         try:
-            # Получение списка файлов и папок
             remote_path = self.remote_path if self.remote_path else ''
             items = self.connection.listPath(self.share, remote_path)
 
@@ -146,7 +145,6 @@ class SMBFileManager:
 
                 filename = item.filename
                 if filename not in ['.', '..'] and any(filename.endswith(ext) for ext in extension):
-                    # Формирование полного SMB пути
                     full_path = f"smb://{self.server}/{self.share}"
                     if self.remote_path:
                         full_path += f"/{self.remote_path}"
@@ -166,50 +164,101 @@ class SMBFileManager:
         finally:
             self._disconnect()
 
-    def get_one_content(self, file_path: str) -> bytes:
+    def get_file_stream(self, file_path: str, chunk_size: int = 8192):
         if not self._connect():
             return None
 
         try:
             # Парсинг пути к файлу
-            clean_path = file_path
-            if clean_path.startswith('smb://'):
-                clean_path = clean_path[6:]
+            if file_path.startswith("smb://"):
+                file_path = file_path[6:]
 
-            parts = clean_path.split('/')
+            parts = file_path.split("/")
             if len(parts) < 3:
                 applogger.error(f"Некорректный путь к файлу: {file_path}")
                 return None
 
             server = parts[0]
             share = parts[1]
-            remote_file_path = '/'.join(parts[2:])
+            remote_file_path = "/".join(parts[2:])
 
             if server != self.server:
                 applogger.error(f"Сервер не соответствует: {server} != {self.server}")
                 return None
 
-            # Создание временного файла
-            import tempfile
+            # Создаем BytesIO объект для потокового чтения
+            # retrieveFile будет записывать в него данные
+            file_obj = io.BytesIO()
 
-            with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-                temp_path = temp_file.name
+            # Скачиваем файл в BytesIO объект
+            self.connection.retrieveFile(share, remote_file_path, file_obj)
 
-            try:
-                # Скачивание файла через retrieveFile
-                with open(temp_path, 'wb') as local_file:
-                    self.connection.retrieveFile(self.share, remote_file_path, local_file)
+            # Перемещаем указатель в начало
+            file_obj.seek(0)
 
-                # Чтение содержимого временного файла
-                with open(temp_path, 'rb') as local_file:
-                    content = local_file.read()
+            def file_generator():
+                try:
+                    while True:
+                        chunk = file_obj.read(chunk_size)
+                        if not chunk:
+                            break
+                        yield chunk
+                finally:
+                    file_obj.close()
+                    self._disconnect()
 
-                applogger.debug(f"Файл успешно прочитан: {remote_file_path}, размер: {len(content)} байт")
-                return content
+            return file_generator()
 
-            finally:
-                # Удаление временного файла
-                os.unlink(temp_path)
+        except Exception as e:
+            applogger.error(f"Ошибка при открытии SMB файла {file_path}: {e}")
+            self._disconnect()
+            return None
+
+    def read_file_chunked(self, file_path: str, callback, chunk_size: int = 8192):
+        stream = self.get_file_stream(file_path, chunk_size)
+        if stream is None:
+            return False
+
+        try:
+            for chunk in stream:
+                callback(chunk)
+            return True
+        except Exception as e:
+            applogger.error(f"Ошибка при чтении файла {file_path}: {e}")
+            return False
+
+    def get_one_content(self, file_path: str) -> bytes:
+        if not self._connect():
+            return None
+
+        try:
+            if file_path.startswith("smb://"):
+                file_path = file_path[6:]
+
+            parts = file_path.split("/")
+            if len(parts) < 3:
+                applogger.error(f"Некорректный путь к файлу: {file_path}")
+                return None
+
+            server = parts[0]
+            share = parts[1]
+            remote_file_path = "/".join(parts[2:])
+
+            if server != self.server:
+                applogger.error(f"Сервер не соответствует: {server} != {self.server}")
+                return None
+
+            # Используем BytesIO для чтения файла
+            file_obj = io.BytesIO()
+            self.connection.retrieveFile(share, remote_file_path, file_obj)
+
+            # Получаем содержимое
+            file_obj.seek(0)
+            content = file_obj.read()
+            file_obj.close()
+
+            applogger.debug(f"Файл успешно прочитан: {remote_file_path}")
+            return content
 
         except Exception as e:
             applogger.error(f"Ошибка при чтении SMB файла {file_path}: {e}")
@@ -224,3 +273,16 @@ class SMBFileManager:
             if content is not None:
                 contents.append(content)
         return contents
+
+    def process_files_streaming(self, file_paths: list[str], process_callback, chunk_size: int = 8192):
+        results = []
+        for file_path in file_paths:
+            stream = self.get_file_stream(file_path, chunk_size)
+            if stream:
+                try:
+                    result = process_callback(stream, file_path)
+                    results.append(result)
+                except Exception as e:
+                    applogger.error(f"Ошибка при обработке файла {file_path}: {e}")
+                    results.append(None)
+        return results
