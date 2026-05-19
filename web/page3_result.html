@@ -6,9 +6,7 @@
         <link rel="stylesheet" href="css/global.css">
     </head>
     <body>
-        <header class="main">
-            <a href="https://mauniver.ru/" ><img class="head" src="pic/logo.PNG" alt="Главная страница"></a>
-        </header>
+        
         <div class="content">
             <header>
                 <h1>Результат сравнения</h1>
@@ -18,7 +16,7 @@
                 <div id="resultContent"></div>
             </div>
             <div class="conteiner result-buttons">
-                <button class="submitBtn" onclick="window.location.href = 'page1_URLnFile.html'">Назад к форме</button>
+                <button class="submitBtn" onclick="window.location.href = 'index.html'">Назад к форме</button>
                 <button class="submitBtn" onclick="downloadReport('pdf')" style="margin-left: 10px;">📄 Скачать PDF</button>
                 <button class="submitBtn" onclick="downloadReport('html')" style="margin-left: 10px;">🌐 Скачать HTML</button>
             </div>
@@ -44,18 +42,20 @@
             }
 
             function formatValue(value) {
+                if (value === null || value === undefined || value === '') {
+                    return '<span style="color: #999;">—</span>';
+                }
                 if (typeof value === 'boolean') {
                     return value ? '✓ Есть' : '✗ Нет';
                 }
-                if (value === null || value === undefined) {
-                    return '—';
-                }
                 if (Array.isArray(value)) {
-                    if (value.length === 0) return '—';
-                    let html = '<ul class="items-list" style="margin: 5px 0 0 20px;">';
+                    if (value.length === 0) {
+                        return '<span style="color: #28a745;">✅ Все в наличии</span>';
+                    }
+                    let html = '<ul style="margin: 5px 0 0 20px;">';
                     value.forEach(item => {
                         if (typeof item === 'object' && item !== null) {
-                            let displayText = item.to_string || item.discipline_name + ' ' + (item.discipline_code || '');
+                            let displayText = item.discipline_name + (item.discipline_code ? ` (${item.discipline_code})` : '');
                             html += '<li>' + escapeHtml(displayText) + '</li>';
                         } else {
                             html += '<li>' + escapeHtml(String(item)) + '</li>';
@@ -91,136 +91,134 @@
                 return names[key] || key.replace(/_/g, ' ');
             }
 
-            function createAccordionSection(title, content, isOpen = false) {
-                let uniqueId = 'section_' + Date.now() + '_' + Math.random().toString(36).substr(2, 8);
-                let displayStyle = isOpen ? 'block' : 'none';
-
-                return `
-                    <div class="accordion-section">
-                        <h3 class="accordion-header" onclick="toggleSection('${uniqueId}', this)">
-                            ${title}
-                            <span class="accordion-icon">${isOpen ? '▲' : '▼'}</span>
-                        </h3>
-                        <div id="${uniqueId}" class="accordion-content" style="display: ${displayStyle};">
-                            ${content}
-                        </div>
-                    </div>
-                `;
+            function displayResult(data) {
+            if (!data) {
+                showError('Нет данных для отображения');
+                return;
             }
 
-            function displayResult(data) {
-                if (!data) {
-                    showError('Нет данных для отображения');
+            if (typeof data === 'string') {
+                try {
+                    data = JSON.parse(data);
+                } catch(e) {
+                    resultContainer.innerHTML = '<pre>' + escapeHtml(data) + '</pre>';
                     return;
                 }
-
-                if (typeof data === 'string') {
-                    try {
-                        data = JSON.parse(data);
-                    } catch(e) {
-                        resultContainer.innerHTML = '<pre class="json-preview">' + escapeHtml(data) + '</pre>';
-                        return;
-                    }
-                }
-
-                let html = '<div class="result-container">';
-
-                // Основная информация
-                let mainInfo = '<div class="info-main">';
-                mainInfo += '<h3>Основная информация</h3>';
-
-                const mainFields = ['specialty', 'discipline_code', 'curriculum_year', 'lvl_education', 'form_education'];
-                for (const field of mainFields) {
-                    if (data[field] !== undefined && data[field] !== null && data[field] !== '') {
-                        mainInfo += '<div class="info-field"><strong>' + formatFieldName(field) + ':</strong> ' + formatValue(data[field]) + '</div>';
-                    }
-                }
-                mainInfo += '</div>';
-                html += mainInfo;
-
-                // Наличие разделов
-                let sectionsInfo = '<div class="info-sections">';
-                sectionsInfo += '<h3>Наличие разделов в учебном плане</h3>';
-
-                const sectionFields = ['education_program', 'calendar_graphic', 'education_plan', 'gia_program', 'education_program_vosp', 'curriculum_plan'];
-                for (const field of sectionFields) {
-                    if (data[field] !== undefined) {
-                        sectionsInfo += '<div class="info-field"><strong>' + formatFieldName(field) + ':</strong> ' + formatValue(data[field]) + '</div>';
-                    }
-                }
-                sectionsInfo += '</div>';
-                html += sectionsInfo;
-
-                // Рабочие программы
-                if (data.working_programs && data.working_programs.length > 0) {
-                    let content = '';
-                    data.working_programs.forEach((item, idx) => {
-                        let name = item.discipline_name || '';
-                        let code = item.discipline_code || '';
-                        content += `<div class="item-row">
-                            <span class="item-number">${idx + 1}.</span> ${escapeHtml(name)}
-                            <span class="item-badge">${escapeHtml(code)}</span>
-                        </div>`;
-                    });
-                    html += createAccordionSection('Рабочие программы дисциплин (' + data.working_programs.length + ')', content);
-                }
-
-                // ФОС материалы
-                if (data.fos_materials && data.fos_materials.length > 0) {
-                    let content = '';
-                    data.fos_materials.forEach((item, idx) => {
-                        let name = item.discipline_name || '';
-                        let code = item.discipline_code || '';
-                        content += `<div class="item-row">
-                            <span class="item-number">${idx + 1}.</span> ${escapeHtml(name)}
-                            <span class="item-badge">${escapeHtml(code)}</span>
-                        </div>`;
-                    });
-                    html += createAccordionSection('ФОС материалы (' + data.fos_materials.length + ')', content);
-                }
-
-                // Программы практик
-                if (data.practic_programs && data.practic_programs.length > 0) {
-                    let content = '';
-                    data.practic_programs.forEach((item, idx) => {
-                        content += `<div class="item-row">
-                            <span class="item-number">${idx + 1}.</span> ${escapeHtml(item)}
-                        </div>`;
-                    });
-                    html += createAccordionSection('Программы практик (' + data.practic_programs.length + ')', content);
-                }
-
-                // Методические материалы
-                if (data.methodical_materials && data.methodical_materials.length > 0) {
-                    let content = '';
-                    data.methodical_materials.forEach((item, idx) => {
-                        let name = item.discipline_name || '';
-                        let code = item.discipline_code || '';
-                        content += `<div class="item-row">
-                            <span class="item-number">${idx + 1}.</span> ${escapeHtml(name)}
-                            <span class="item-badge">${escapeHtml(code)}</span>
-                        </div>`;
-                    });
-                    html += createAccordionSection('Методические материалы (' + data.methodical_materials.length + ')', content);
-                }
-
-                html += '</div>';
-                resultContainer.innerHTML = html;
             }
 
-            window.toggleSection = function(id, headerElement) {
-                var el = document.getElementById(id);
-                if (el) {
-                    var icon = headerElement.querySelector('.accordion-icon');
-                    if (el.style.display === 'none' || el.style.display === '') {
-                        el.style.display = 'block';
-                        if (icon) icon.innerHTML = '▲';
-                    } else {
-                        el.style.display = 'none';
-                        if (icon) icon.innerHTML = '▼';
-                    }
+            let html = '<div style="padding: 10px;">';
+
+            // ========== ОСНОВНАЯ ИНФОРМАЦИЯ ==========
+            html += '<div style="background: #f5f5f5; padding: 15px; border-radius: 10px; margin-bottom: 20px;">';
+            html += '<h3 style="margin-top: 0;">Основная информация</h3>';
+            const mainFields = ['specialty', 'discipline_code', 'curriculum_year', 'lvl_education', 'form_education'];
+            for (const field of mainFields) {
+                let value = data[field];
+                html += `<div style="margin: 8px 0;"><strong>${formatFieldName(field)}:</strong> ${formatValue(value)}</div>`;
+            }
+            html += '</div>';
+
+            // ========== НАЛИЧИЕ РАЗДЕЛОВ ==========
+            html += '<div style="background: #f5f5f5; padding: 15px; border-radius: 10px; margin-bottom: 20px;">';
+            html += '<h3 style="margin-top: 0;">Наличие разделов в учебном плане</h3>';
+            const sectionFields = ['education_program', 'calendar_graphic', 'education_plan', 'gia_program', 'education_program_vosp', 'curriculum_plan'];
+            for (const field of sectionFields) {
+                let value = data[field];
+                let displayValue = (value === true || value === 'true') ? '✓ Есть' : '✗ Нет';
+                html += `<div style="margin: 8px 0;"><strong>${formatFieldName(field)}:</strong> ${displayValue}</div>`;
+            }
+            html += '</div>';
+
+            // ========== ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ ДЛЯ ОТОБРАЖЕНИЯ СЕКЦИЙ ==========
+            function renderSection(title, fieldName, successMessage, bgColor) {
+                let fieldData = data[fieldName];
+                
+                // Проверяем, существует ли поле и не является ли null/undefined
+                let hasField = fieldData !== undefined && fieldData !== null;
+                let isEmptyArray = hasField && Array.isArray(fieldData) && fieldData.length === 0;
+                let hasItems = hasField && Array.isArray(fieldData) && fieldData.length > 0;
+                
+                html += `<div style="background: ${bgColor}; padding: 15px; border-radius: 10px; margin-bottom: 20px;">`;
+                html += `<h3 style="margin-top: 0;">${title}</h3>`;
+                
+                if (!hasField) {
+                    // Поле отсутствует в ответе от парсера
+                    html += `<div style="color: #ff9800; text-align: center; padding: 10px;">
+                                ⚠️ Информация отсутствует в ответе сервера
+                            </div>`;
+                } else if (isEmptyArray) {
+                    // Поле есть, но массив пустой - всё отлично!
+                    html += `<div style="color: #28a745; text-align: center; padding: 10px; background: #e8f5e9; border-radius: 5px;">
+                                ✅ ${successMessage}
+                            </div>`;
+                } else if (hasItems) {
+                    // Есть расхождения
+                    html += `<div style="color: #d32f2f; margin-bottom: 10px;">⚠️ Найдены расхождения:</div>`;
+                    fieldData.forEach((item, idx) => {
+                        if (typeof item === 'object' && item !== null) {
+                            let displayText = item.discipline_name || item.name || item;
+                            let code = item.discipline_code || item.code || '';
+                            if (code) {
+                                html += `<div style="padding: 5px 0; border-bottom: 1px solid #ddd;">
+                                            ${idx + 1}. ${escapeHtml(displayText)} 
+                                            <span style="background: #ccc; padding: 2px 6px; border-radius: 3px; font-size: 12px;">${escapeHtml(code)}</span>
+                                        </div>`;
+                            } else {
+                                html += `<div style="padding: 5px 0; border-bottom: 1px solid #ddd;">
+                                            ${idx + 1}. ${escapeHtml(displayText)}
+                                        </div>`;
+                            }
+                        } else {
+                            html += `<div style="padding: 5px 0; border-bottom: 1px solid #ddd;">
+                                        ${idx + 1}. ${escapeHtml(String(item))}
+                                    </div>`;
+                        }
+                    });
+                } else {
+                    // Неизвестный тип данных (не массив)
+                    html += `<div style="color: #ff9800; text-align: center; padding: 10px;">
+                                ⚠️ Неожиданный формат данных
+                            </div>`;
                 }
-            };
+                
+                html += '</div>';
+            }
+
+            // ========== РАБОЧИЕ ПРОГРАММЫ ==========
+            renderSection(
+                'Рабочие программы дисциплин', 
+                'working_programs', 
+                'Все рабочие программы дисциплин в наличии',
+                '#fff3e0'
+            );
+
+            // ========== ФОС МАТЕРИАЛЫ ==========
+            renderSection(
+                'ФОС материалы', 
+                'fos_materials', 
+                'Все ФОС материалы в наличии',
+                '#e8f5e9'
+            );
+
+            // ========== ПРОГРАММЫ ПРАКТИК ==========
+            renderSection(
+                'Программы практик', 
+                'practic_programs', 
+                'Все программы практик в наличии',
+                '#e3f2fd'
+            );
+
+            // ========== МЕТОДИЧЕСКИЕ МАТЕРИАЛЫ ==========
+            renderSection(
+                'Методические материалы', 
+                'methodical_materials', 
+                'Все методические материалы в наличии',
+                '#fce4ec'
+            );
+
+            html += '</div>';
+            resultContainer.innerHTML = html;
+        }
 
             // Функция скачивания отчета
             window.downloadReport = async function(format) {
@@ -228,7 +226,6 @@
                 const originalText = button.innerText;
 
                 try {
-                    // Получаем JSON результат из localStorage
                     const savedResult = localStorage.getItem('compareResult');
                     if (!savedResult) {
                         alert('Результат не найден. Пожалуйста, выполните сравнение заново.');
@@ -236,36 +233,21 @@
                     }
 
                     const resultData = JSON.parse(savedResult);
-
-                    // Меняем текст кнопки
                     button.disabled = true;
                     button.innerText = format === 'pdf' ? '⏳ Генерация PDF...' : '⏳ Генерация HTML...';
 
-                    // Отправляем JSON на соответствующий эндпоинт
                     const endpoint = format === 'pdf' ? '/api/convert/pdf' : '/api/convert/html';
-
-                    console.log(`Отправка JSON на ${endpoint}`);
-
                     const response = await fetch(endpoint, {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(resultData)
                     });
 
                     if (!response.ok) {
-                        let errorText = '';
-                        try {
-                            const errorData = await response.json();
-                            errorText = JSON.stringify(errorData);
-                        } catch (e) {
-                            errorText = await response.text();
-                        }
+                        let errorText = await response.text();
                         throw new Error(`Ошибка ${response.status}: ${errorText.substring(0, 200)}`);
                     }
 
-                    // Скачиваем полученный файл
                     const blob = await response.blob();
                     const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
                     const specialtyName = resultData.specialty ? resultData.specialty.replace(/[^a-zа-яё0-9]/gi, '_').substring(0, 50) : 'result';
@@ -279,14 +261,12 @@
                     link.click();
                     document.body.removeChild(link);
                     URL.revokeObjectURL(url);
-
                     alert(`✅ Файл ${format.toUpperCase()} успешно скачан!`);
 
                 } catch (error) {
                     console.error('Ошибка при скачивании:', error);
                     alert(`❌ Не удалось скачать файл ${format.toUpperCase()}:\n${error.message}`);
                 } finally {
-                    // Восстанавливаем кнопку
                     button.disabled = false;
                     button.innerText = originalText;
                 }
@@ -297,11 +277,10 @@
                 var saved = localStorage.getItem('compareResult');
                 if (saved && saved !== 'undefined' && saved !== 'null') {
                     var parsedData = JSON.parse(saved);
-                    console.log('Полученные данные:', parsedData);
                     displayResult(parsedData);
                 } else {
                     showError('Результаты не найдены');
-                    resultContainer.innerHTML = '<div class="no-data">Вернитесь на главную страницу и отправьте данные заново</div>';
+                    resultContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: #999;">Вернитесь на главную страницу и отправьте данные заново</div>';
                 }
             } catch(e) {
                 console.error('Ошибка:', e);

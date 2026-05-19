@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Проверка учебных планов</title>
+    <link rel="stylesheet" href="css/global.css">
+    <style>
+        /* Дополнительные стили только для новой страницы */
+        .mode-selector {
+            display: flex;
+            gap: 20px;
+            padding: 15px;
+            background: #e9ecef;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .mode-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+        }
+        .mode-option input {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        .mode-option label {
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .mode-content {
+            display: none;
+        }
+        .mode-content.active {
+            display: block;
+        }
+        .file-list {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            font-size: 12pt;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        .file-list ul {
+            margin: 5px 0 0 20px;
+        }
+        .file-list li {
+            color: #495057;
+        }
+        .submit-area {
+            margin-top: 20px;
+        }
+        .clearBtn {
+            background: #6c757d;
+            margin-left: 10px;
+        }
+        .clearBtn:hover {
+            background: #5a6268;
+        }
+        .badge {
+            display: inline-block;
+            background: #28a745;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11pt;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <header class="main">
+        <a href="https://mauniver.ru/"><img class="head" src="pic/logo.PNG" alt="Главная страница"></a>
+        <div class="right"></div>
+    </header>
+    <div class="content">
+        <header>
+            <h1>Проверка учебных планов</h1>
+            <p>Выберите режим работы</p>
+        </header>
+
+        <!-- Переключатель режимов -->
+        <div class="mode-selector">
+            <div class="mode-option">
+                <input type="radio" name="mode" id="modeCompare" value="compare" checked>
+                <label for="modeCompare">📄 Сравнение с сайтом</label>
+            </div>
+            <div class="mode-option">
+                <input type="radio" name="mode" id="modeFiles" value="files">
+                <label for="modeFiles">📁 Проверка файлов</label>
+            </div>
+        </div>
+
+        <!-- Режим 1: Сравнение с сайтом -->
+        <div id="compareMode" class="mode-content active">
+            <div class="conteiner">
+                <p>Ссылка на страницу с учебным планом</p>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="urlInput" placeholder="https://mauniver.ru/sveden/education/op/..." autocomplete="off" style="flex: 1;">
+                    <button class="clearUrlBtn" id="clearUrlBtn">Очистить</button>
+                </div>
+            </div>
+            <div class="conteiner">
+                <p>XML или PLX файл с учебным планом <span class="badge">один файл</span></p>
+                <input type="file" id="compareFileInput" accept=".xml,.plx">
+            </div>
+        </div>
+
+        <!-- Режим 2: Проверка файлов -->
+        <div id="filesMode" class="mode-content">
+            <div class="conteiner">
+                <p>Выберите файлы для проверки <span class="badge">можно несколько</span></p>
+                <input type="file" id="multipleFileInput" accept=".xml,.plx" multiple>
+                <div id="fileList" class="file-list" style="display: none;">
+                    <strong>Выбрано файлов: <span id="fileCount">0</span></strong>
+                    <ul id="fileNamesList"></ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Кнопки действий -->
+        <div class="conteiner submit-area">
+            <button class="submitBtn" id="submitBtn">Отправить</button>
+            <button class="submitBtn clearBtn" id="clearAllBtn">Очистить всё</button>
+        </div>
+
+        <div class="outputArea">
+            <p>Результат или ошибки:</p>
+            <div id="outputContent">
+                <p>- здесь появится информация об отправленных данных -</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM элементы
+        const modeCompare = document.getElementById('modeCompare');
+        const modeFiles = document.getElementById('modeFiles');
+        const compareModeDiv = document.getElementById('compareMode');
+        const filesModeDiv = document.getElementById('filesMode');
+        
+        const urlInput = document.getElementById('urlInput');
+        const clearUrlBtn = document.getElementById('clearUrlBtn');
+        const compareFileInput = document.getElementById('compareFileInput');
+        const multipleFileInput = document.getElementById('multipleFileInput');
+        const fileListDiv = document.getElementById('fileList');
+        const fileCountSpan = document.getElementById('fileCount');
+        const fileNamesList = document.getElementById('fileNamesList');
+        
+        const submitBtn = document.getElementById('submitBtn');
+        const clearAllBtn = document.getElementById('clearAllBtn');
+        const outputContent = document.getElementById('outputContent');
+
+        // Состояние
+        let currentMode = 'compare';
+        let compareFile = null;
+        let multipleFiles = [];
+
+        // Переключение режимов
+        function switchMode() {
+            if (modeCompare.checked) {
+                currentMode = 'compare';
+                compareModeDiv.classList.add('active');
+                filesModeDiv.classList.remove('active');
+            } else {
+                currentMode = 'files';
+                compareModeDiv.classList.remove('active');
+                filesModeDiv.classList.add('active');
+            }
+            clearOutput();
+        }
+
+        modeCompare.addEventListener('change', switchMode);
+        modeFiles.addEventListener('change', switchMode);
+
+        // Очистка вывода
+        function clearOutput() {
+            outputContent.innerHTML = `<p>- здесь появится информация об отправленных данных -</p>`;
+        }
+
+        function showError(message) {
+            outputContent.innerHTML = `<div class="error" style="color: #d32f2f; padding: 12px; background: #ffebee; border-radius: 4px; border-left: 4px solid #d32f2f; margin: 10px 0;">
+                <strong>Ошибка:</strong> ${message}
+            </div>`;
+        }
+
+        function showSuccess(message) {
+            outputContent.innerHTML = `<div class="success" style="color: #2e7d32; padding: 12px; background: #e8f5e9; border-radius: 4px; border-left: 4px solid #2e7d32; margin: 10px 0;">
+                ${message}
+            </div>`;
+        }
+
+        function showLoading(message = "⏳ Отправка данных на сервер...") {
+            outputContent.innerHTML = `<div class="loading" style="padding: 12px; background: #e3f2fd; border-radius: 4px;">
+                ${message}
+            </div>`;
+        }
+
+        // Обработка выбора файла в режиме сравнения
+        compareFileInput.addEventListener('change', function(event) {
+            compareFile = event.target.files[0];
+            if (compareFile) {
+                showSuccess(`Выбран файл: ${compareFile.name}`);
+                setTimeout(clearOutput, 2000);
+            }
+        });
+
+        // Обработка выбора нескольких файлов
+        multipleFileInput.addEventListener('change', function(event) {
+            multipleFiles = Array.from(event.target.files);
+            const count = multipleFiles.length;
+            fileCountSpan.textContent = count;
+            
+            if (count > 0) {
+                fileNamesList.innerHTML = multipleFiles.map(f => `<li>${f.name}</li>`).join('');
+                fileListDiv.style.display = 'block';
+                showSuccess(`Выбрано ${count} файлов`);
+                setTimeout(clearOutput, 2000);
+            } else {
+                fileListDiv.style.display = 'none';
+                fileNamesList.innerHTML = '';
+            }
+        });
+
+        // Очистка URL
+        clearUrlBtn.addEventListener('click', function() {
+            urlInput.value = '';
+        });
+
+        // Очистка всего
+        clearAllBtn.addEventListener('click', function() {
+            // Очищаем поля
+            urlInput.value = '';
+            compareFileInput.value = '';
+            multipleFileInput.value = '';
+            
+            compareFile = null;
+            multipleFiles = [];
+            
+            fileListDiv.style.display = 'none';
+            fileNamesList.innerHTML = '';
+            fileCountSpan.textContent = '0';
+            
+            clearOutput();
+            showSuccess('Все поля очищены');
+            setTimeout(clearOutput, 1500);
+        });
+
+        // Основная функция отправки
+        submitBtn.addEventListener('click', async function() {
+            if (currentMode === 'compare') {
+                // Режим сравнения с сайтом
+                const url = urlInput.value.trim();
+                
+                if (!url) {
+                    showError('Укажите URL адрес');
+                    return;
+                }
+                
+                if (!compareFile) {
+                    showError('Выберите файл (.xml или .plx)');
+                    return;
+                }
+                
+                if (compareFile.size > 10 * 1024 * 1024) {
+                    showError('Файл превышает 10 МБ');
+                    return;
+                }
+                
+                showLoading('⏳ Отправка данных на сервер для сравнения...');
+                
+                try {
+                    const formData = new FormData();
+                    formData.append('file', compareFile);
+                    const encodedUrl = encodeURIComponent(url);
+                    const apiUrl = `/api/compare/json?url=${encodedUrl}`;
+                    
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        body: formData,
+                        headers: { 'Accept': 'application/json' }
+                    });
+                    
+                    if (!response.ok) {
+                        let errorMessage = `Ошибка ${response.status}`;
+                        try {
+                            const errorData = await response.json();
+                            errorMessage = errorData.detail || errorData.message || errorMessage;
+                        } catch (e) {
+                            errorMessage = await response.text();
+                        }
+                        throw new Error(errorMessage.substring(0, 200));
+                    }
+                    
+                    const result = await response.json();
+                    localStorage.setItem('compareResult', JSON.stringify(result));
+                    showSuccess('Анализ выполнен успешно! Перенаправление...');
+                    
+                    setTimeout(() => {
+                        window.location.href = 'page3_result.html';
+                    }, 500);
+                    
+                } catch (error) {
+                    showError(error.message);
+                    console.error('Ошибка:', error);
+                }
+                
+            } else {
+                // Режим проверки файлов (множественная загрузка)
+                if (multipleFiles.length === 0) {
+                    showError('Выберите хотя бы один файл');
+                    return;
+                }
+                
+                // Проверка размера каждого файла (макс 50 МБ)
+                const maxSize = 50 * 1024 * 1024;
+                for (const file of multipleFiles) {
+                    if (file.size > maxSize) {
+                        showError(`Файл ${file.name} превышает 50 МБ`);
+                        return;
+                    }
+                }
+                
+                showLoading(`⏳ Отправка ${multipleFiles.length} файлов на сервер...`);
+                
+                try {
+                    const formData = new FormData();
+                    multipleFiles.forEach(file => {
+                        formData.append('files', file);
+                    });
+                    
+                    // TODO: здесь нужен эндпоинт для множественной загрузки
+                    // Пока что заглушка - используем первый файл для теста
+                    // В реальности нужно добавить эндпоинт /api/compare/files/json на бэкенде
+                    
+                    showError('Функция множественной загрузки в разработке. Бэкенд эндпоинт /api/compare/files/json пока не реализован.');
+                    
+                    /* 
+                    // Когда эндпоинт будет готов:
+                    const response = await fetch('/api/compare/files/json', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`Ошибка ${response.status}`);
+                    }
+                    
+                    const results = await response.json();
+                    localStorage.setItem('compareResults', JSON.stringify(results));
+                    showSuccess('Анализ файлов выполнен успешно!');
+                    
+                    setTimeout(() => {
+                        window.location.href = 'page3_result.html';
+                    }, 500);
+                    */
+                    
+                } catch (error) {
+                    showError(error.message);
+                    console.error('Ошибка:', error);
+                }
+            }
+        });
+    </script>
+</body>
+</html>
