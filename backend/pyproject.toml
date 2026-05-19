@@ -13,4 +13,5 @@ dependencies = [
     "pytest>=9.0.2",
     "weasyprint>=68.1",
     "requests>=2.33.1",
+    "pysmb>=1.2.14",
 ]
