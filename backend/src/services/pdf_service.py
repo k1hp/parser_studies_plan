@@ -1,6 +1,7 @@
 from jinja2 import Environment, FileSystemLoader
 from weasyprint import HTML
 from weasyprint.css.validation.properties import direction
+from datetime import datetime
 
 from src.config import BASE_DIR
 from src.schemas.response_schemas import ApiResponseSchema
@@ -12,6 +13,7 @@ class PDFService:
 
     def _render(self, data: ApiResponseSchema, output_path: str = None) -> str:
         template = self.env.get_template(self.template_name)
+        current_date_formatted = datetime.now().strftime("%d.%m.%Y в %H:%M")
         html_out = template.render(
             specialty=data.specialty,
             discipline_code=data.discipline_code,
@@ -31,7 +33,9 @@ class PDFService:
             education_program_vosp=data.education_program_vosp,
             curriculum_plan=data.curriculum_plan,
 
-            disciplines=data.working_programs
+            disciplines=data.working_programs,
+
+            current_date=current_date_formatted
         )
         return html_out
 
