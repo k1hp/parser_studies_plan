@@ -17,12 +17,14 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(mess
 
 
 class WebParsingService:
+    """Класс, отвечающий за парсинг данных с веб-страницы, извлекая информацию о направлениях подготовки, дисциплинах и связанных материалах, с учетом различных форматов представления данных и обеспечивающий устойчивость к изменениям структуры страницы."""
 
     def __init__(self, curriculum_file: str = "plan.xml"):
         self.curriculum_file = curriculum_file
-        self.url: str = "https://mauniver.ru/sveden/education/op/43292#prak"  # грустно
+        self.url: str = "https://mauniver.ru/sveden/education/op/30823#prak"  # грустно
 
-    def parse_by_year(self) -> List[Dict[str, Any]]:
+    def parse_by_year(self) -> list[Dict[str, Any]]:
+      """Парсит данные с веб-страницы, извлекая информацию о направлениях подготовки, дисциплинах и связанных материалах, с учетом различных форматов представления данных и обеспечивающий устойчивость к изменениям структуры страницы. Возвращает список словарей с данными по каждому году приема."""
       logger.info("Start parsing URL %s", self.url)
         
         # Добавляем заголовки и отключаем проверку SSL
@@ -42,7 +44,6 @@ class WebParsingService:
             logger.error(f"Request error: {e}")
             from fastapi import HTTPException
             raise HTTPException(status_code=400, detail="Ссылка указана неверно или ведет на неизвестный ресурс")
-        
 
       soup = BeautifulSoup(response.text, "html.parser")
       logger.info("Page loaded, length=%s", len(response.text))
@@ -52,7 +53,7 @@ class WebParsingService:
           logger.error("Main div not found")
           return []
 
-      # Парсим H1
+      # Парсим H1, название направления
       h1_tag = soup.find('h1')
       h1_text = h1_tag.get_text(strip=True) if h1_tag else ""
       pattern = r'^(\d{2}\.\d{2}\.\d{2})\s+(.+?)\s+\(приём\s+(.+)\)$'
@@ -141,7 +142,7 @@ class WebParsingService:
                         
                         # Если код не найден, используем старый метод как fallback
                         if not disc_code or disc_code == text or disc_code.startswith('UNKNOWN'):
-                            # Пробуем разные способы извлечения кода
+                            # Пробуем разные способы извлечения кода, для универсальности
                             code_match = re.match(r'^([A-Z0-9\.\(\)]+?)[_\s]', text)
                             if not code_match:
                                 code_match = re.match(r'^([A-Z0-9\.\(\)]+)', text)
@@ -290,6 +291,7 @@ class WebParsingService:
         return code, name
     
     def parse_and_validate_all(self) -> List[CurriculumModel]:
+        """Парсит данные с веб-страницы и валидирует их, возвращая список моделей CurriculumModel."""
         results = self.parse_by_year()
         models = []
         for data in results:
@@ -300,12 +302,13 @@ class WebParsingService:
         return models
 
     def parse_url(self, url: str) -> list[CurriculumModel]:
+        """Парсит данные с указанного URL и возвращает список моделей CurriculumModel."""
         self.url = url
         return self.parse_and_validate_all()
 
     
 
 if __name__ == "__main__":
-    service = WebParsingService("https://mauniver.ru/sveden/education/op/55217#prak")
+    service = WebParsingService("https://mauniver.ru/sveden/education/op/30823#prak")
     results = service.parse_by_year()
     print_results_as_logging(results)
