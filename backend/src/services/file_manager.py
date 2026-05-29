@@ -91,34 +91,43 @@ class SMBFileManager:
 
             client_name = 'file_manager_client'
 
+            # Сначала пробуем подключение через прямой TCP (порт 445) - SMB3
+            applogger.debug(f"Попытка подключения к {self.server} через порт 445 (SMB3)")
+
             self.connection = SMBConnection(
                 username=self.username,
                 password=self.password,
                 my_name=client_name,
                 remote_name=self.server,
                 use_ntlm_v2=True,
-                is_direct_tcp=False
+                is_direct_tcp=True  # Используем прямой TCP для SMB3
             )
 
-            connected = self.connection.connect(self.server, 139)
-            if not connected:
+            connected = self.connection.connect(self.server, 445)
+
+            if connected:
+                applogger.debug(f"SMB соединение установлено с {self.server} через порт 445")
+                return True
+            else:
+                # Если не получилось через 445, пробуем через NetBIOS (порт 139) - SMB1/2
+                applogger.debug(f"Попытка подключения к {self.server} через порт 139 (NetBIOS)")
                 self.connection = SMBConnection(
                     username=self.username,
                     password=self.password,
                     my_name=client_name,
                     remote_name=self.server,
                     use_ntlm_v2=True,
-                    is_direct_tcp=True
+                    is_direct_tcp=False
                 )
-                connected = self.connection.connect(self.server, 445)
+                connected = self.connection.connect(self.server, 139)
 
-            if connected:
-                applogger.debug(f"SMB соединение установлено с {self.server}")
-                return True
-            else:
-                applogger.error(f"Не удалось подключиться к {self.server}")
-                self.connection = None
-                return False
+                if connected:
+                    applogger.debug(f"SMB соединение установлено с {self.server} через порт 139")
+                    return True
+                else:
+                    applogger.error(f"Не удалось подключиться к {self.server}")
+                    self.connection = None
+                    return False
 
         except Exception as e:
             applogger.error(f"Ошибка SMB подключения: {e}")
@@ -130,31 +139,78 @@ class SMBFileManager:
             self.connection.close()
             self.connection = None
 
-    def get_files_in_directory(self, extension: tuple[str] = (".plx", ".xml")) -> list[str]:
+    def _get_files_recursive(self, current_path: str, extension: tuple, files_list: list, base_path: str = ""):
+        try:
+            # Получаем список элементов в текущей директории
+            items = self.connection.listPath(self.share, current_path)
+
+            for item in items:
+                if item.filename in ['.', '..']:
+                    continue
+
+                # Формируем полный путь к элементу
+                if current_path:
+                    item_path = f"{current_path}/{item.filename}"
+                else:
+                    item_path = item.filename
+
+                if item.isDirectory:
+                    # Если это директория, рекурсивно обходим её
+                    applogger.debug(f"Обработка директории: {item_path}")
+                    self._get_files_recursive(item_path, extension, files_list, base_path)
+                else:
+                    # Если это файл, проверяем расширение
+                    if any(item.filename.lower().endswith(ext.lower()) for ext in extension):
+                        # Формируем полный SMB путь к файлу
+                        full_path = f"smb://{self.server}/{self.share}"
+                        if item_path:
+                            full_path += f"/{item_path}"
+                        files_list.append(full_path)
+                        applogger.debug(f"Найден файл: {item_path}")
+
+        except Exception as e:
+            applogger.error(f"Ошибка при обходе директории {current_path}: {e}")
+
+    def get_files_in_directory(self, extension: tuple[str] = (".plx", ".xml"), recursive: bool = True) -> list[str]:
         if not self._connect():
             return []
 
         try:
-            remote_path = self.remote_path if self.remote_path else ''
-            items = self.connection.listPath(self.share, remote_path)
-
             files = []
-            for item in items:
-                if item.isDirectory:
-                    continue
 
-                filename = item.filename
-                if filename not in ['.', '..'] and any(filename.endswith(ext) for ext in extension):
-                    full_path = f"smb://{self.server}/{self.share}"
-                    if self.remote_path:
-                        full_path += f"/{self.remote_path}"
-                    full_path += f"/{filename}"
-                    files.append(full_path)
+            if recursive:
+                # Рекурсивный поиск во всех вложенных папках
+                remote_path = self.remote_path if self.remote_path else ''
+                applogger.debug(f"Рекурсивный поиск файлов в: {self.share}/{remote_path}")
+                self._get_files_recursive(remote_path, extension, files)
+            else:
+                # Поиск только в текущей директории (без рекурсии)
+                remote_path = self.remote_path if self.remote_path else ''
+                items = self.connection.listPath(self.share, remote_path)
+
+                for item in items:
+                    if item.isDirectory or item.filename in ['.', '..']:
+                        continue
+
+                    filename = item.filename
+                    if any(filename.endswith(ext) for ext in extension):
+                        full_path = f"smb://{self.server}/{self.share}"
+                        if self.remote_path:
+                            full_path += f"/{self.remote_path}"
+                        full_path += f"/{filename}"
+                        files.append(full_path)
 
             applogger.debug(f"Найдено SMB файлов: {len(files)} в {self.smb_path}")
+
+            # Выводим структуру найденных файлов
             if files:
-                applogger.debug("Список файлов:")
-                applogger.debug("\n".join(f"- {os.path.basename(f)}" for f in files))
+                applogger.debug("Список найденных файлов:")
+                for f in files[:10]:  # Показываем первые 10 для отладки
+                    applogger.debug(f"- {f}")
+                if len(files) > 10:
+                    applogger.debug(f"... и еще {len(files) - 10} файлов")
+            else:
+                applogger.warning(f"Файлы с расширениями {extension} не найдены в {self.smb_path}")
 
             return files
 
@@ -187,10 +243,10 @@ class SMBFileManager:
                 return None
 
             # Создаем BytesIO объект для потокового чтения
-            # retrieveFile будет записывать в него данные
             file_obj = io.BytesIO()
 
             # Скачиваем файл в BytesIO объект
+            applogger.debug(f"Чтение файла: {share}/{remote_file_path}")
             self.connection.retrieveFile(share, remote_file_path, file_obj)
 
             # Перемещаем указатель в начало
@@ -257,7 +313,7 @@ class SMBFileManager:
             content = file_obj.read()
             file_obj.close()
 
-            applogger.debug(f"Файл успешно прочитан: {remote_file_path}")
+            applogger.debug(f"Файл успешно прочитан: {remote_file_path} (размер: {len(content)} байт)")
             return content
 
         except Exception as e:
@@ -286,3 +342,33 @@ class SMBFileManager:
                     applogger.error(f"Ошибка при обработке файла {file_path}: {e}")
                     results.append(None)
         return results
+
+    def get_directory_structure(self, current_path: str = "", indent: int = 0):
+        """
+        Вспомогательный метод для отладки - выводит структуру директорий.
+        """
+        if not self._connect():
+            return
+
+        try:
+            remote_path = current_path if current_path else (self.remote_path if self.remote_path else '')
+            items = self.connection.listPath(self.share, remote_path)
+
+            for item in items:
+                if item.filename in ['.', '..']:
+                    continue
+
+                prefix = "  " * indent
+                if item.isDirectory:
+                    applogger.debug(f"{prefix} {item.filename}/")
+                    # Рекурсивно показываем содержимое директории
+                    new_path = f"{remote_path}/{item.filename}" if remote_path else item.filename
+                    self.get_directory_structure(new_path, indent + 1)
+                else:
+                    applogger.debug(f"{prefix} {item.filename}")
+
+        except Exception as e:
+            applogger.error(f"Ошибка при получении структуры директории: {e}")
+        finally:
+            if indent == 0:
+                self._disconnect()
