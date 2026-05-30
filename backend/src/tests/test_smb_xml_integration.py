@@ -7,6 +7,7 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
+from backend.src.config import SMB_PATH, SMB_USERNAME, SMB_PASSWORD
 from backend.src.services.file_manager import SMBFileManager, FileManager
 from backend.src.services.xml_parsing_service import XmlParsingService
 from backend.src.utils import applogger
@@ -19,9 +20,9 @@ class TestSMBXmlIntegration:
     def smb_config(self):
         """Фикстура с конфигурацией SMB"""
         return {
-            "smb_path": "smb://127.0.0.1/Share",
-            "username": "username",
-            "password": "password"
+            "smb_path": SMB_PATH,
+            "username": SMB_USERNAME,
+            "password": SMB_PASSWORD
         }
 
     @pytest.fixture

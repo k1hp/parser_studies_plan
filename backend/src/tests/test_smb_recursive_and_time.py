@@ -6,12 +6,11 @@ from datetime import datetime
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
-from backend.src.services.file_manager import SMBFileManager
+from src.config import SMB_PATH, SMB_USERNAME, SMB_PASSWORD
+from src.services.file_manager import SMBFileManager
 
 
 class Timer:
-    """Класс для измерения времени выполнения"""
-
     def __init__(self, name: str = "Операция"):
         self.name = name
         self.start_time = None
@@ -19,14 +18,14 @@ class Timer:
 
     def __enter__(self):
         self.start_time = time.perf_counter()
-        print(f"\nНачало: {self.name}...")
+        print(f"\n>>> {self.name}...")
         return self
 
     def __exit__(self, *args):
         self.end_time = time.perf_counter()
         elapsed = self.elapsed_time
-        print(f"Завершено: {self.name}")
-        print(f"   Время выполнения: {elapsed:.3f} секунд ({elapsed * 1000:.2f} мс)")
+        print(f"<<< {self.name}")
+        print(f"    Время: {format_time(elapsed)}")
 
     @property
     def elapsed_time(self):
@@ -36,12 +35,10 @@ class Timer:
 
 
 def print_separator(char="=", length=60):
-    """Печать разделителя"""
     print(char * length)
 
 
 def format_time(seconds: float) -> str:
-    """Форматирование времени"""
     if seconds < 0.001:
         return f"{seconds * 1000000:.2f} мкс"
     elif seconds < 1:
@@ -54,240 +51,163 @@ def format_time(seconds: float) -> str:
         return f"{minutes} мин {secs:.1f} сек"
 
 
-def test_smb_recursive_search():
-    """Тест рекурсивного поиска файлов во вложенных папках с измерением времени"""
+def test_sequential_vs_parallel():
+    """Сравнение последовательного vs параллельного сканирования"""
 
-    # Конфигурация
     smb = SMBFileManager(
-        smb_path="smb://127.0.0.1/Share",
-        username="username",
-        password="password"
+        SMB_PATH,
+        username=SMB_USERNAME,
+        password=SMB_PASSWORD
     )
 
     print_separator("=")
-    print("ТЕСТ: Рекурсивный поиск SMB файлов с измерением времени")
+    print("ТЕСТ: Последовательное vs Параллельное сканирование SMB")
     print(f"Время начала: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print_separator("=")
 
-    # Словарь для хранения результатов
-    results = {}
+    # --- Подключение ---
+    print("\n1. Подключение к SMB:")
+    print_separator("-")
+    with Timer("Подключение") as timer:
+        connected = smb.connect()
+    if not connected:
+        print("   Нет соединения. Тест остановлен.")
+        return
+    print(f"   Статус: подключено ({smb.server}/{smb.share})")
 
-    # 1. Показываем структуру директорий
-    print("\n1. Структура SMB шары:")
+    # --- Последовательное сканирование ---
+    print("\n2. Последовательный обход (один listPath за раз):")
+    print_separator("-")
+    with Timer("Последовательное сканирование") as timer:
+        files_seq = smb._get_files_sequential((".plx", ".xml"))
+    seq_time = timer.elapsed_time
+    seq_count = len(files_seq)
+    print(f"   Файлов: {seq_count}")
+
+    # --- Параллельное сканирование с разным числом воркеров ---
+    worker_counts = [2, 4, 8, 16]
+    parallel_results = {}
+
+    print("\n3. Параллельный обход (listPath в отдельных потоках):")
     print_separator("-")
 
-    with Timer("Получение структуры директорий") as timer:
-        smb.get_directory_structure()
-    results['directory_structure'] = timer.elapsed_time
+    for workers in worker_counts:
+        with Timer(f"Параллельно, workers={workers}") as timer:
+            files_par = smb._get_files_parallel((".plx", ".xml"), max_workers=workers)
+        parallel_results[workers] = {
+            'time': timer.elapsed_time,
+            'count': len(files_par),
+        }
+        print(f"   Файлов: {len(files_par)}")
 
-    # 2. Поиск всех файлов рекурсивно
-    print("\n2. Поиск всех XML и PLX файлов (рекурсивно):")
-    print_separator("-")
-
-    with Timer("Рекурсивный поиск файлов") as timer:
-        all_files = smb.get_files_in_directory(recursive=True)
-    results['recursive_search_time'] = timer.elapsed_time
-    results['recursive_files_count'] = len(all_files)
-
-    if all_files:
-        print(f"\nРезультаты рекурсивного поиска:")
-        print(f"Найдено файлов: {len(all_files)}")
-        print(f"Время поиска: {format_time(results['recursive_search_time'])}")
-        print(f"Скорость: {len(all_files) / results['recursive_search_time']:.2f} файлов/сек")
-
-        print("\n   Список найденных файлов (первые 10):")
-        for i, f in enumerate(all_files[:10], 1):
-            smb_path = f.replace("smb://localhost/Share/", "")
-            print(f"     {i}. {smb_path}")
-        if len(all_files) > 10:
-            print(f"     ... и еще {len(all_files) - 10} файлов")
-    else:
-        print("\nФайлы не найдены")
-
-    # 3. Поиск только в корне (без рекурсии)
-    print("\n3. Поиск файлов ТОЛЬКО в корне (без рекурсии):")
-    print_separator("-")
-
-    with Timer("Поиск в корневой директории") as timer:
-        root_files = smb.get_files_in_directory(recursive=False)
-    results['root_search_time'] = timer.elapsed_time
-    results['root_files_count'] = len(root_files)
-
-    if root_files:
-        print(f"\nРезультаты поиска в корне:")
-        print(f"Найдено файлов в корне: {len(root_files)}")
-        print(f"Время поиска: {format_time(results['root_search_time'])}")
-        print(f"Скорость: {len(root_files) / results['root_search_time']:.2f} файлов/сек")
-
-        print("\n   Список файлов в корне:")
-        for f in root_files:
-            print(f"     - {os.path.basename(f)}")
-    else:
-        print("\nВ корне нет файлов с нужными расширениями")
-
-    # 4. Сравнение рекурсивного и нерекурсивного поиска
-    if all_files and root_files:
-        print("\n4. Сравнение производительности:")
-        print_separator("-")
-
-        # Сравнение времени
-        time_diff = results['recursive_search_time'] - results['root_search_time']
-        time_percent = (results['recursive_search_time'] / results['root_search_time']) * 100
-
-        print(f"\nСравнение:")
-        print(
-            f"   Нерекурсивный поиск: {format_time(results['root_search_time'])} ({results['root_files_count']} файлов)")
-        print(
-            f"   Рекурсивный поиск:   {format_time(results['recursive_search_time'])} ({results['recursive_files_count']} файлов)")
-        print(
-            f"   Разница во времени:  {format_time(abs(time_diff))} ({time_percent:.1f}% от времени корневого поиска)")
-
-        # Дополнительные файлы, найденные рекурсивно
-        extra_files = results['recursive_files_count'] - results['root_files_count']
-        if extra_files > 0:
-            print(f"   Дополнительно найдено: {extra_files} файлов во вложенных папках")
-
-    # 5. Чтение первого найденного файла
-    if all_files:
-        print("\n5. Чтение первого найденного файла:")
-        print_separator("-")
-        first_file = all_files[0]
-        print(f"   Файл: {first_file}")
-
-        with Timer(f"Чтение файла ({os.path.basename(first_file)})") as timer:
-            content = smb.get_one_content(first_file)
-        results['file_read_time'] = timer.elapsed_time
-
-        if content:
-            file_size_kb = len(content) / 1024
-            print(f"\nРезультаты чтения файла:")
-            print(f"Размер файла: {len(content)} байт ({file_size_kb:.2f} КБ)")
-            print(f"Время чтения: {format_time(results['file_read_time'])}")
-            print(f"Скорость: {file_size_kb / results['file_read_time']:.2f} КБ/сек")
-
-            # Показываем первые 200 байт
-            print(f"\n   Первые 200 байт содержимого:")
-            print(f"   {content[:200]}")
+        # Проверка что результаты совпадают
+        if set(files_par) == set(files_seq):
+            print(f"   Совпадение с sequential: OK")
         else:
-            print("Не удалось прочитать файл")
+            only_seq = set(files_seq) - set(files_par)
+            only_par = set(files_par) - set(files_seq)
+            if only_seq:
+                print(f"   Только в sequential: {len(only_seq)}")
+            if only_par:
+                print(f"   Только в parallel:  {len(only_par)}")
 
-    # 6. Тест на чтение нескольких файлов
-    if len(all_files) >= 3:
-        print("\n6. Чтение нескольких файлов (первые 3):")
-        print_separator("-")
+    # --- Сводка ---
+    print("\n4. Сводка производительности:")
+    print_separator("-")
+    print(f"\n   {'Метод':<30} {'Время':<20} {'Файлов':<10} {'Ускорение':<15}")
+    print(f"   {'-'*30} {'-'*20} {'-'*10} {'-'*15}")
+    print(f"   {'Последовательный':<30} {format_time(seq_time):<20} {seq_count:<10} {'1.0x (база)':<15}")
 
-        test_files = all_files[:3]
-        total_size = 0
-        total_time = 0
+    best_time = seq_time
+    best_workers = 1
+    for workers in worker_counts:
+        r = parallel_results[workers]
+        speedup = seq_time / r['time'] if r['time'] > 0 else float('inf')
+        marker = " <-- лучшее!" if r['time'] < best_time else ""
+        print(f"   {f'Параллельный ({workers} пот.)':<30} {format_time(r['time']):<20} {r['count']:<10} {f'{speedup:.1f}x':<15}{marker}")
+        if r['time'] < best_time:
+            best_time = r['time']
+            best_workers = workers
 
-        for i, file_path in enumerate(test_files, 1):
-            file_name = os.path.basename(file_path)
-            print(f"\n   {i}. Чтение файла: {file_name}")
+    saved = seq_time - best_time
+    print(f"\n   Лучший результат: {best_workers} потоков")
+    print(f"   Сэкономлено: {format_time(saved)} ({seq_time / best_time:.1f}x ускорение)")
 
-            with Timer(f"   Чтение {file_name}") as timer:
-                content = smb.get_one_content(file_path)
+    # --- Чтение файлов ---
+    print("\n5. Чтение первых 3 файлов (проверка что сессия жива):")
+    print_separator("-")
+    test_files = files_seq[:3]
+    total_size = 0
+    total_time = 0
 
-            if content:
-                file_size_kb = len(content) / 1024
-                total_size += len(content)
-                total_time += timer.elapsed_time
-                print(f"      Размер: {file_size_kb:.2f} КБ, Скорость: {file_size_kb / timer.elapsed_time:.2f} КБ/сек")
-            else:
-                print(f"Не удалось прочитать файл")
+    for i, fp in enumerate(test_files, 1):
+        name = fp.rsplit('/', 1)[-1] if '/' in fp else fp
+        with Timer(f"Чтение {name}") as timer:
+            content = smb.get_one_content(fp)
+        if content:
+            kb = len(content) / 1024
+            total_size += len(content)
+            total_time += timer.elapsed_time
+            print(f"   {i}. {name}: {kb:.1f} КБ за {format_time(timer.elapsed_time)}")
 
-        if total_size > 0:
-            print(f"\nИтого по {len(test_files)} файлам:")
-            print(f"      Общий размер: {total_size / 1024:.2f} КБ")
-            print(f"      Общее время: {format_time(total_time)}")
-            print(f"      Средняя скорость: {(total_size / 1024) / total_time:.2f} КБ/сек")
+    if total_size > 0:
+        print(f"\n   Общий объём: {total_size / 1024:.1f} КБ")
+        print(f"   Общее время чтения: {format_time(total_time)}")
+        print(f"   Средняя скорость: {(total_size / 1024) / max(total_time, 0.001):.0f} КБ/сек")
 
-    # 7. Итоговый отчет
-    print("ИТОГОВЫЙ ОТЧЕТ ПО ПРОИЗВОДИТЕЛЬНОСТИ")
+    # --- Отключение ---
+    print("\n6. Отключение:")
+    print_separator("-")
+    smb.disconnect()
+    print(f"   is_connected: {smb.is_connected}")
 
-    print(f"\nСводка времени выполнения:")
-    print(f"   1. Получение структуры директорий: {format_time(results.get('directory_structure', 0))}")
-    print(f"   2. Рекурсивный поиск файлов:      {format_time(results.get('recursive_search_time', 0))}")
-    print(f"   3. Поиск в корневой директории:   {format_time(results.get('root_search_time', 0))}")
-
-    if 'file_read_time' in results:
-        print(f"   4. Чтение одного файла:           {format_time(results.get('file_read_time', 0))}")
-
-    print(f"\nКоличество найденных файлов:")
-    print(f"   - Рекурсивно: {results.get('recursive_files_count', 0)} файлов")
-    print(f"   - В корне:    {results.get('root_files_count', 0)} файлов")
-
-    # Вычисляем общее время
-    total_time = sum([
-        results.get('directory_structure', 0),
-        results.get('recursive_search_time', 0),
-        results.get('root_search_time', 0),
-        results.get('file_read_time', 0)
-    ])
-
-    print(f"\nОбщее время выполнения теста: {format_time(total_time)}")
-    print(f"Время окончания: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-
-    # Оценка производительности
-    print("\nОценка производительности:")
-    if results.get('recursive_search_time', 0) < 1:
-        print("Отлично! Поиск файлов выполняется очень быстро (< 1 сек)")
-    elif results.get('recursive_search_time', 0) < 5:
-        print("Хорошо! Поиск файлов выполняется приемлемо (1-5 сек)")
-    elif results.get('recursive_search_time', 0) < 10:
-        print("Средняя производительность (5-10 сек)")
-    else:
-        print("Медленно! Рекомендуется оптимизировать поиск (> 10 сек)")
-
+    # --- Итог ---
+    print("\n")
+    print_separator("=")
+    print("ИТОГ")
+    print_separator("=")
+    print(f"   Последовательно: {format_time(seq_time)}")
+    print(f"   Параллельно (лучший): {format_time(best_time)} ({best_workers} потоков)")
+    print(f"   Ускорение: x{seq_time / max(best_time, 0.001):.1f}")
+    print(f"   Время окончания: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print_separator("=")
 
-    return results
 
-
-def test_smb_performance_with_different_depths():
-    """Тест производительности на разной глубине вложенности"""
+def test_parallel_only():
+    """Быстрый тест — только параллельное сканирование (без долгого sequential)"""
 
     smb = SMBFileManager(
-        smb_path="smb://127.0.0.1/Share",
-        username="username",
-        password="password"
+        SMB_PATH,
+        username=SMB_USERNAME,
+        password=SMB_PASSWORD
     )
 
-    print("ТЕСТ: Производительность на разной глубине вложенности")
+    print_separator("=")
+    print("ТЕСТ: Параллельное сканирование (без sequential для быстроты)")
+    print(f"Время начала: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    print_separator("=")
 
-    # Тестируем разные настройки рекурсии
-    depths = [1, 2, 3, 5, 10]  # Глубина рекурсии
-    results = []
+    smb.connect()
+    print(f"   Подключено: {smb.is_connected}")
 
-    for depth in depths:
-        print(f"\nТестирование глубины: {depth}")
+    with Timer("Параллельное сканирование (8 workers)") as timer:
+        files = smb.get_files_in_directory(recursive=True, max_workers=8)
 
-        # Здесь нужно создать директории разной глубины или использовать существующие
-        # Для демонстрации используем стандартный поиск
+    print(f"\n   Найдено файлов: {len(files)}")
+    print(f"   Время: {format_time(timer.elapsed_time)}")
 
-        with Timer(f"Поиск с глубиной {depth}") as timer:
-            # Модифицируйте метод для ограничения глубины или используйте стандартный
-            files = smb.get_files_in_directory(recursive=True)
+    if files:
+        print(f"\n   Первые 10 файлов:")
+        for i, f in enumerate(files[:10], 1):
+            print(f"   {i}. {f.rsplit('/', 1)[-1] if '/' in f else f}")
 
-        results.append({
-            'depth': depth,
-            'time': timer.elapsed_time,
-            'files': len(files)
-        })
-
-    # Вывод результатов
-    print("\nСравнение производительности:")
-    print_separator("-")
-    print(f"{'Глубина':<10} {'Время':<15} {'Файлов':<10} {'Скорость':<15}")
-    print_separator("-")
-
-    for r in results:
-        speed = r['files'] / r['time'] if r['time'] > 0 else 0
-        print(f"{r['depth']:<10} {format_time(r['time']):<15} {r['files']:<10} {speed:.2f} файлов/сек")
+    smb.disconnect()
+    print(f"\n   Отключено. Время окончания: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
 
 if __name__ == "__main__":
-    # Запускаем основной тест
-    test_results = test_smb_recursive_search()
-
-    # тест производительности на разной глубине
-    # test_smb_performance_with_different_depths()
+    import sys
+    if "--fast" in sys.argv:
+        test_parallel_only()
+    else:
+        test_sequential_vs_parallel()
