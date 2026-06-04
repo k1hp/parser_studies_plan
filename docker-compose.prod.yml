@@ -1,0 +1,24 @@
+services:
+  fastapi-service-analyze:
+    build:
+      context: ./backend
+    container_name: fastapi-service-analyze
+    networks:
+      - server-network
+    restart: always
+
+  nginx:
+    build:
+      context: ./web
+    container_name: nginx-proxy
+    ports:
+      - "80:80"
+    networks:
+      - server-network
+
+    depends_on:
+      - fastapi-service-analyze
+
+networks:
+  server-network:
+    driver: bridge
