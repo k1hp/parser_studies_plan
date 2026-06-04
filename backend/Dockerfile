@@ -1,16 +1,17 @@
-FROM python:3.13-slim
+FROM python:3.13-alpine
 
 WORKDIR /fastapi-service
 
-RUN apt-get update && apt-get install -y \
-    python3-pip \
-    python3-cffi \
-    python3-brotli \
-    libpango-1.0-0 \
-    libharfbuzz0b \
-    libpangoft2-1.0-0 \
-    libgobject-2.0-0 \
-    && rm -rf /var/lib/apt/lists/*
+RUN apk update && apk add --no-cache \
+    gcc \
+    musl-dev \
+    python3-dev \
+    libffi-dev \
+    pango-dev \
+    harfbuzz-dev \
+    glib-dev \
+    gobject-introspection-dev \
+    cairo-dev
 
 RUN pip install --no-cache-dir uv
 
