@@ -4,78 +4,17 @@
     <meta charset="UTF-8">
     <title>Проверка учебных планов</title>
     <link rel="stylesheet" href="css/global.css">
-    <style>
-        /* Дополнительные стили только для новой страницы */
-        .mode-selector {
-            display: flex;
-            gap: 20px;
-            padding: 15px;
-            background: #e9ecef;
-            border-radius: 10px;
-            margin-bottom: 20px;
-        }
-        .mode-option {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-        }
-        .mode-option input {
-            width: 18px;
-            height: 18px;
-            cursor: pointer;
-        }
-        .mode-option label {
-            cursor: pointer;
-            font-weight: 500;
-        }
-        .mode-content {
-            display: none;
-        }
-        .mode-content.active {
-            display: block;
-        }
-        .file-list {
-            margin-top: 10px;
-            padding: 10px;
-            background: #f8f9fa;
-            border-radius: 5px;
-            font-size: 12pt;
-            max-height: 150px;
-            overflow-y: auto;
-        }
-        .file-list ul {
-            margin: 5px 0 0 20px;
-        }
-        .file-list li {
-            color: #495057;
-        }
-        .submit-area {
-            margin-top: 20px;
-        }
-        .clearBtn {
-            background: #6c757d;
-            margin-left: 10px;
-        }
-        .clearBtn:hover {
-            background: #5a6268;
-        }
-        .badge {
-            display: inline-block;
-            background: #28a745;
-            color: white;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 11pt;
-            margin-left: 10px;
-        }
-    </style>
 </head>
 <body>
+    <!-- Шапка сайта -->
     <header class="main">
-        <a href="https://mauniver.ru/"><img class="head" src="pic/logo.PNG" alt="Главная страница"></a>
+        <a href="https://mauniver.ru/">
+            <img class="head" src="pic/logo.PNG" alt="Главная страница">
+        </a>
         <div class="right"></div>
     </header>
+
+    <!-- Основной контент -->
     <div class="content">
         <header>
             <h1>Проверка учебных планов</h1>
@@ -98,35 +37,70 @@
         <div id="compareMode" class="mode-content active">
             <div class="conteiner">
                 <p>Ссылка на страницу с учебным планом</p>
-                <div style="display: flex; gap: 10px;">
-                    <input type="text" id="urlInput" placeholder="https://mauniver.ru/sveden/education/op/..." autocomplete="off" style="flex: 1;">
+                <div class="input-group">
+                    <input type="text" id="urlInput" placeholder="https://mauniver.ru/sveden/education/op/..." autocomplete="off">
                     <button class="clearUrlBtn" id="clearUrlBtn">Очистить</button>
                 </div>
             </div>
             <div class="conteiner">
                 <p>XML или PLX файл с учебным планом <span class="badge">один файл</span></p>
-                <input type="file" id="compareFileInput" accept=".xml,.plx">
+                <!-- Область загрузки для режима сравнения -->
+                <div class="file-upload-area" id="compareUploadArea">
+                    <div class="upload-icon">📄</div>
+                    <div class="upload-text">Нажмите для выбора файла</div>
+                    <div class="upload-hint">или перетащите файл сюда</div>
+                    <div class="upload-hint">Поддерживаются только .xml и .plx</div>
+                </div>
+                <input type="file" id="compareFileInput" accept=".xml,.plx" class="hidden-file-input">
+                
+                <!-- Контейнер для отображения выбранного файла -->
+                <div id="compareSelectedContainer" class="selected-files-container" style="display: none;">
+                    <div class="files-header">
+                        <span class="files-title">📋 Выбранный файл</span>
+                        <button type="button" class="clear-files-btn" id="clearCompareFileBtn">Очистить</button>
+                    </div>
+                    <div class="files-list" id="compareFileInfo"></div>
+                </div>
             </div>
         </div>
 
-        <!-- Режим 2: Проверка файлов -->
+        <!-- Режим 2: Проверка файлов (множественная загрузка) -->
         <div id="filesMode" class="mode-content">
             <div class="conteiner">
                 <p>Выберите файлы для проверки <span class="badge">можно несколько</span></p>
-                <input type="file" id="multipleFileInput" accept=".xml,.plx" multiple>
-                <div id="fileList" class="file-list" style="display: none;">
-                    <strong>Выбрано файлов: <span id="fileCount">0</span></strong>
-                    <ul id="fileNamesList"></ul>
+                
+                <!-- Область для добавления файлов (без отдельной кнопки) -->
+                <div class="file-upload-area" id="fileUploadArea">
+                    <div class="upload-icon">📁</div>
+                    <div class="upload-text">Нажмите для выбора файлов</div>
+                    <div class="upload-hint">или перетащите файлы сюда</div>
+                    <div class="upload-hint">Поддерживаются только .xml и .plx</div>
+                </div>
+                
+                <!-- Скрытый input для выбора файлов -->
+                <input type="file" id="multipleFileInput" accept=".xml,.plx" multiple class="hidden-file-input">
+                
+                <!-- Контейнер для списка выбранных файлов -->
+                <div id="selectedFilesContainer" class="selected-files-container" style="display: none;">
+                    <div class="files-header">
+                        <span class="files-title">📋 Выбранные файлы</span>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <span class="files-count" id="filesCount">0</span>
+                            <button type="button" class="clear-files-btn" id="clearFilesBtn">Очистить всё</button>
+                        </div>
+                    </div>
+                    <div class="files-list" id="filesList"></div>
                 </div>
             </div>
         </div>
 
         <!-- Кнопки действий -->
         <div class="conteiner submit-area">
-            <button class="submitBtn" id="submitBtn">Отправить</button>
-            <button class="submitBtn clearBtn" id="clearAllBtn">Очистить всё</button>
+            <button class="btn submitBtn" id="submitBtn">Отправить</button>
+            <button class="btn clearBtn" id="clearAllBtn">Очистить всё</button>
         </div>
 
+        <!-- Область вывода результата -->
         <div class="outputArea">
             <p>Результат или ошибки:</p>
             <div id="outputContent">
@@ -136,29 +110,243 @@
     </div>
 
     <script>
-        // DOM элементы
+        // ========== ПОЛУЧЕНИЕ ЭЛЕМЕНТОВ DOM ==========
+        // Элементы переключения режимов
         const modeCompare = document.getElementById('modeCompare');
         const modeFiles = document.getElementById('modeFiles');
         const compareModeDiv = document.getElementById('compareMode');
         const filesModeDiv = document.getElementById('filesMode');
         
+        // Элементы режима сравнения
         const urlInput = document.getElementById('urlInput');
         const clearUrlBtn = document.getElementById('clearUrlBtn');
         const compareFileInput = document.getElementById('compareFileInput');
-        const multipleFileInput = document.getElementById('multipleFileInput');
-        const fileListDiv = document.getElementById('fileList');
-        const fileCountSpan = document.getElementById('fileCount');
-        const fileNamesList = document.getElementById('fileNamesList');
+        const compareUploadArea = document.getElementById('compareUploadArea');
+        const compareSelectedContainer = document.getElementById('compareSelectedContainer');
+        const compareFileInfo = document.getElementById('compareFileInfo');
+        const clearCompareFileBtn = document.getElementById('clearCompareFileBtn');
         
+        // Элементы режима множественной загрузки
+        const multipleFileInput = document.getElementById('multipleFileInput');
+        const fileUploadArea = document.getElementById('fileUploadArea');
+        const selectedFilesContainer = document.getElementById('selectedFilesContainer');
+        const filesList = document.getElementById('filesList');
+        const filesCountSpan = document.getElementById('filesCount');
+        const clearFilesBtn = document.getElementById('clearFilesBtn');
+        
+        // Общие элементы
         const submitBtn = document.getElementById('submitBtn');
         const clearAllBtn = document.getElementById('clearAllBtn');
         const outputContent = document.getElementById('outputContent');
 
-        // Состояние
-        let currentMode = 'compare';
-        let compareFile = null;
-        let multipleFiles = [];
+        // ========== СОСТОЯНИЕ ПРИЛОЖЕНИЯ ==========
+        let currentMode = 'compare';      // Текущий режим: 'compare' или 'files'
+        let compareFile = null;            // Файл для режима сравнения
+        let multipleFiles = [];             // Массив файлов для режима множественной загрузки
 
+        // ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
+        
+        // Экранирование HTML символов
+        window.escapeHtml = function(text) {
+            if (!text) return '';
+            return String(text).replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        };
+
+        // Форматирование размера файла
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // Получение иконки по расширению
+        function getFileIcon(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            if (ext === 'xml') return '📄';
+            if (ext === 'plx') return '📋';
+            return '📎';
+        }
+
+        // Проверка расширения файла
+        function isValidFileExtension(filename) {
+            const ext = filename.split('.').pop().toLowerCase();
+            return ext === 'xml' || ext === 'plx';
+        }
+
+        // Очистка области вывода
+        function clearOutput() {
+            outputContent.innerHTML = `<p>- здесь появится информация об отправленных данных -</p>`;
+        }
+
+        // Показать сообщение об ошибке
+        function showError(message) {
+            outputContent.innerHTML = `<div class="error"><strong>Ошибка:</strong> ${message}</div>`;
+        }
+
+        // Показать сообщение об успехе
+        function showSuccess(message) {
+            outputContent.innerHTML = `<div class="success">${message}</div>`;
+        }
+
+        // Показать состояние загрузки
+        function showLoading(message = "⏳ Отправка данных на сервер...") {
+            outputContent.innerHTML = `<div class="loading">${message}</div>`;
+        }
+
+        // ========== ФУНКЦИИ ДЛЯ РЕЖИМА СРАВНЕНИЯ ==========
+        
+        // Обновление отображения выбранного файла в режиме сравнения
+        function updateCompareFileDisplay() {
+            if (compareFile) {
+                compareSelectedContainer.style.display = 'block';
+                compareFileInfo.innerHTML = `
+                    <div class="file-item">
+                        <div class="file-info">
+                            <span class="file-icon">${getFileIcon(compareFile.name)}</span>
+                            <span class="file-name">${escapeHtml(compareFile.name)}</span>
+                            <span class="file-size">(${formatFileSize(compareFile.size)})</span>
+                        </div>
+                    </div>
+                `;
+            } else {
+                compareSelectedContainer.style.display = 'none';
+                compareFileInfo.innerHTML = '';
+            }
+        }
+
+        // Обработка выбора файла в режиме сравнения
+        function handleCompareFileSelect(file) {
+            if (!file) {
+                compareFile = null;
+                updateCompareFileDisplay();
+                return false;
+            }
+            
+            // Проверка расширения
+            if (!isValidFileExtension(file.name)) {
+                showError(`Неверный формат файла: ${file.name}. Поддерживаются только .xml и .plx`);
+                return false;
+            }
+            
+            // Проверка размера (макс 10 МБ)
+            if (file.size > 10 * 1024 * 1024) {
+                showError(`Файл ${file.name} превышает 10 МБ`);
+                return false;
+            }
+            
+            compareFile = file;
+            updateCompareFileDisplay();
+            showSuccess(`Выбран файл: ${compareFile.name}`);
+            setTimeout(clearOutput, 2000);
+            return true;
+        }
+
+        // Очистка файла в режиме сравнения
+        function clearCompareFile() {
+            compareFile = null;
+            compareFileInput.value = '';
+            updateCompareFileDisplay();
+            showSuccess('Файл удалён');
+            setTimeout(clearOutput, 1500);
+        }
+
+        // ========== ФУНКЦИИ ДЛЯ РЕЖИМА МНОЖЕСТВЕННОЙ ЗАГРУЗКИ ==========
+        
+        // Обновление отображения списка файлов
+        function updateFilesList() {
+            const count = multipleFiles.length;
+            filesCountSpan.textContent = count;
+            
+            if (count === 0) {
+                selectedFilesContainer.style.display = 'none';
+                multipleFileInput.value = '';
+                return;
+            }
+            
+            selectedFilesContainer.style.display = 'block';
+            filesList.innerHTML = multipleFiles.map((file, index) => `
+                <div class="file-item" data-index="${index}">
+                    <div class="file-info">
+                        <span class="file-icon">${getFileIcon(file.name)}</span>
+                        <span class="file-name">${escapeHtml(file.name)}</span>
+                        <span class="file-size">(${formatFileSize(file.size)})</span>
+                    </div>
+                    <div class="file-actions">
+                        <button class="remove-file-btn" onclick="removeFile(${index})" title="Удалить">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Удаление файла по индексу (глобальная функция для onclick)
+        window.removeFile = function(index) {
+            multipleFiles.splice(index, 1);
+            updateFilesList();
+            showSuccess(`Файл удалён. Осталось файлов: ${multipleFiles.length}`);
+            setTimeout(clearOutput, 2000);
+        };
+
+        // Добавление новых файлов с проверкой
+        function addFiles(newFiles) {
+            const maxSize = 50 * 1024 * 1024; // 50 МБ
+            const validFiles = [];
+            const errors = [];
+            
+            for (const file of newFiles) {
+                // Проверка расширения
+                if (!isValidFileExtension(file.name)) {
+                    errors.push(`${file.name}: неподдерживаемый формат (нужен .xml или .plx)`);
+                    continue;
+                }
+                
+                // Проверка размера
+                if (file.size > maxSize) {
+                    errors.push(`${file.name}: превышает 50 МБ`);
+                    continue;
+                }
+                
+                // Проверка на дубликаты
+                const isDuplicate = multipleFiles.some(f => f.name === file.name && f.size === file.size);
+                if (isDuplicate) {
+                    errors.push(`${file.name}: файл уже добавлен`);
+                    continue;
+                }
+                
+                validFiles.push(file);
+            }
+            
+            if (validFiles.length > 0) {
+                multipleFiles.push(...validFiles);
+                updateFilesList();
+                showSuccess(`Добавлено файлов: ${validFiles.length}`);
+            }
+            
+            if (errors.length > 0) {
+                showError(errors.join('<br>'));
+            } else {
+                setTimeout(clearOutput, 2000);
+            }
+        }
+
+        // Очистка всех файлов
+        function clearAllFiles() {
+            if (multipleFiles.length > 0) {
+                multipleFiles = [];
+                updateFilesList();
+                showSuccess('Все файлы удалены');
+                setTimeout(clearOutput, 1500);
+            }
+        }
+
+        // ========== ОБРАБОТЧИКИ СОБЫТИЙ ==========
+        
         // Переключение режимов
         function switchMode() {
             if (modeCompare.checked) {
@@ -173,83 +361,86 @@
             clearOutput();
         }
 
-        modeCompare.addEventListener('change', switchMode);
-        modeFiles.addEventListener('change', switchMode);
-
-        // Очистка вывода
-        function clearOutput() {
-            outputContent.innerHTML = `<p>- здесь появится информация об отправленных данных -</p>`;
-        }
-
-        function showError(message) {
-            outputContent.innerHTML = `<div class="error" style="color: #d32f2f; padding: 12px; background: #ffebee; border-radius: 4px; border-left: 4px solid #d32f2f; margin: 10px 0;">
-                <strong>Ошибка:</strong> ${message}
-            </div>`;
-        }
-
-        function showSuccess(message) {
-            outputContent.innerHTML = `<div class="success" style="color: #2e7d32; padding: 12px; background: #e8f5e9; border-radius: 4px; border-left: 4px solid #2e7d32; margin: 10px 0;">
-                ${message}
-            </div>`;
-        }
-
-        function showLoading(message = "⏳ Отправка данных на сервер...") {
-            outputContent.innerHTML = `<div class="loading" style="padding: 12px; background: #e3f2fd; border-radius: 4px;">
-                ${message}
-            </div>`;
-        }
-
-        // Обработка выбора файла в режиме сравнения
-        compareFileInput.addEventListener('change', function(event) {
-            compareFile = event.target.files[0];
-            if (compareFile) {
-                showSuccess(`Выбран файл: ${compareFile.name}`);
-                setTimeout(clearOutput, 2000);
+        // Обработчики для режима сравнения
+        compareUploadArea.addEventListener('click', () => compareFileInput.click());
+        
+        compareFileInput.addEventListener('change', (event) => {
+            if (event.target.files.length > 0) {
+                handleCompareFileSelect(event.target.files[0]);
+            }
+        });
+        
+        clearCompareFileBtn.addEventListener('click', clearCompareFile);
+        clearUrlBtn.addEventListener('click', () => { urlInput.value = ''; });
+        
+        // Drag & Drop для режима сравнения
+        compareUploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            compareUploadArea.classList.add('drag-over');
+        });
+        
+        compareUploadArea.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            compareUploadArea.classList.remove('drag-over');
+        });
+        
+        compareUploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            compareUploadArea.classList.remove('drag-over');
+            const droppedFiles = Array.from(e.dataTransfer.files);
+            if (droppedFiles.length > 0) {
+                // Для режима сравнения берем только первый файл
+                handleCompareFileSelect(droppedFiles[0]);
             }
         });
 
-        // Обработка выбора нескольких файлов
-        multipleFileInput.addEventListener('change', function(event) {
-            multipleFiles = Array.from(event.target.files);
-            const count = multipleFiles.length;
-            fileCountSpan.textContent = count;
-            
-            if (count > 0) {
-                fileNamesList.innerHTML = multipleFiles.map(f => `<li>${f.name}</li>`).join('');
-                fileListDiv.style.display = 'block';
-                showSuccess(`Выбрано ${count} файлов`);
-                setTimeout(clearOutput, 2000);
-            } else {
-                fileListDiv.style.display = 'none';
-                fileNamesList.innerHTML = '';
+        // Обработчики для режима множественной загрузки (без отдельной кнопки)
+        fileUploadArea.addEventListener('click', () => multipleFileInput.click());
+        
+        multipleFileInput.addEventListener('change', (event) => {
+            if (event.target.files.length > 0) {
+                addFiles(Array.from(event.target.files));
+                multipleFileInput.value = '';
+            }
+        });
+        
+        clearFilesBtn.addEventListener('click', clearAllFiles);
+        
+        // Drag & Drop для множественной загрузки
+        fileUploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileUploadArea.classList.add('drag-over');
+        });
+        
+        fileUploadArea.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            fileUploadArea.classList.remove('drag-over');
+        });
+        
+        fileUploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileUploadArea.classList.remove('drag-over');
+            const droppedFiles = Array.from(e.dataTransfer.files);
+            if (droppedFiles.length > 0) {
+                addFiles(droppedFiles);
             }
         });
 
-        // Очистка URL
-        clearUrlBtn.addEventListener('click', function() {
+        // Очистка всех полей
+        clearAllBtn.addEventListener('click', () => {
             urlInput.value = '';
-        });
-
-        // Очистка всего
-        clearAllBtn.addEventListener('click', function() {
-            // Очищаем поля
-            urlInput.value = '';
-            compareFileInput.value = '';
-            multipleFileInput.value = '';
-            
-            compareFile = null;
-            multipleFiles = [];
-            
-            fileListDiv.style.display = 'none';
-            fileNamesList.innerHTML = '';
-            fileCountSpan.textContent = '0';
-            
+            clearCompareFile();
+            clearAllFiles();
             clearOutput();
             showSuccess('Все поля очищены');
             setTimeout(clearOutput, 1500);
         });
 
-        // Основная функция отправки
+        // Переключение режимов
+        modeCompare.addEventListener('change', switchMode);
+        modeFiles.addEventListener('change', switchMode);
+
+        // ========== ОТПРАВКА ДАННЫХ НА СЕРВЕР ==========
         submitBtn.addEventListener('click', async function() {
             if (currentMode === 'compare') {
                 // Режим сравнения с сайтом
@@ -262,11 +453,6 @@
                 
                 if (!compareFile) {
                     showError('Выберите файл (.xml или .plx)');
-                    return;
-                }
-                
-                if (compareFile.size > 10 * 1024 * 1024) {
-                    showError('Файл превышает 10 МБ');
                     return;
                 }
                 
@@ -315,15 +501,6 @@
                     return;
                 }
                 
-                // Проверка размера каждого файла (макс 50 МБ)
-                const maxSize = 50 * 1024 * 1024;
-                for (const file of multipleFiles) {
-                    if (file.size > maxSize) {
-                        showError(`Файл ${file.name} превышает 50 МБ`);
-                        return;
-                    }
-                }
-                
                 showLoading(`⏳ Отправка ${multipleFiles.length} файлов на сервер...`);
                 
                 try {
@@ -332,31 +509,30 @@
                         formData.append('files', file);
                     });
                     
-                    // TODO: здесь нужен эндпоинт для множественной загрузки
-                    // Пока что заглушка - используем первый файл для теста
-                    // В реальности нужно добавить эндпоинт /api/compare/files/json на бэкенде
-                    
-                    showError('Функция множественной загрузки в разработке. Бэкенд эндпоинт /api/compare/files/json пока не реализован.');
-                    
-                    /* 
-                    // Когда эндпоинт будет готов:
-                    const response = await fetch('/api/compare/files/json', {
+                    const endpoint = '/api/compare/files/json'
+                    const response = await fetch(endpoint, {
                         method: 'POST',
                         body: formData
                     });
                     
                     if (!response.ok) {
-                        throw new Error(`Ошибка ${response.status}`);
+                        let errorMessage = `Ошибка ${response.status}`;
+                        try {
+                            const errorData = await response.json();
+                            errorMessage = errorData.detail || errorData.message || errorMessage;
+                        } catch (e) {
+                            errorMessage = await response.text();
+                        }
+                        throw new Error(errorMessage.substring(0, 200));
                     }
                     
                     const results = await response.json();
                     localStorage.setItem('compareResults', JSON.stringify(results));
-                    showSuccess('Анализ файлов выполнен успешно!');
+                    showSuccess('Анализ файлов выполнен успешно! Перенаправление...');
                     
                     setTimeout(() => {
                         window.location.href = 'page3_result.html';
                     }, 500);
-                    */
                     
                 } catch (error) {
                     showError(error.message);
