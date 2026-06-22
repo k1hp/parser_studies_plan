@@ -127,7 +127,7 @@ class XmlParsingService:
             applogger.error(f"Неожиданная ошибка при парсинге: {e}")
             return None
 
-    def extract_all(self, contents: list[bytes]) -> list[ResponseModel | PracticeModel]:
+    def extract_all(self, contents: list[bytes]) -> list[ResponseModel]:
         """Извлекает данные из нескольких XML-файлов, возвращая список моделей ResponseModel."""
         results = []
 
