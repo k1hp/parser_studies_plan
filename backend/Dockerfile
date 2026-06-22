@@ -1,25 +1,20 @@
-FROM python:3.13-alpine
+FROM python:3.13-slim
 
 WORKDIR /fastapi-service
 
-RUN apk update && apk add --no-cache \
-    gcc \
-    musl-dev \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
     python3-dev \
     libffi-dev \
-    pango-dev \
-    harfbuzz-dev \
-    glib-dev \
-    gobject-introspection-dev \
-    cairo-dev
+    libpango1.0-dev \
+    pkg-config \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN pip install --no-cache-dir uv
 
-COPY ./pyproject.toml ./
+COPY pyproject.toml uv.lock ./
 
-RUN uv sync
-
-# RUN mkdir src
+RUN uv sync --frozen
 
 COPY ./src ./src
 
@@ -27,5 +22,4 @@ ENV PYTHONPATH=/fastapi-service
 
 EXPOSE 8000
 
-#CMD uv run alembic upgrade head && uv run uvicorn app.src.simple_entrypoint:app --host 0.0.0.0 --port 8000 --reload
-CMD [ "sh", "-c", "uv run uvicorn src.entrypoint:app --host 0.0.0.0 --port 8000 --reload" ]
+CMD ["sh", "-c", "uv run uvicorn src.entrypoint:app --host 0.0.0.0 --port 8000 --reload"]
