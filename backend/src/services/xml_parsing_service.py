@@ -4,12 +4,12 @@ import xml.etree.ElementTree as ET
 import re
 from pathlib import Path
 
-from src.utils import applogger
-from src.schemas.xml_schemas import ResponseModel, DisciplineDetail
-from src.schemas.web_schemas import CurriculumModel
+from backend.src.utils import applogger
+from backend.src.schemas.xml_schemas import ResponseModel, DisciplineDetail, PracticeDetail
+from backend.src.schemas.web_schemas import CurriculumModel
 # from src.models.response_model_xml_parser import ResponseModel, DisciplineDetail
-from src.services.file_manager import FileManager
-from src.services.pdf_service import PDFService
+from backend.src.services.file_manager import FileManager
+from backend.src.services.pdf_service import PDFService
 
 
 class PlxDataExtractor:
@@ -93,6 +93,39 @@ class PlxDataExtractor:
             applogger.error(f"Ошибка при извлечении информации о дисциплинах: {e}")
             return []
 
+    @staticmethod
+    def extract_items(root: ET.Element) -> tuple[list[DisciplineDetail], list[PracticeDetail]]:
+        disciplines = []
+        practices = []
+        seen_disciplines = set()
+        seen_practices = set()
+
+        for elem in root.iter():
+            if elem.tag.endswith('ПланыСтроки'):
+                name = elem.get('Дисциплина', '').strip()
+                code = elem.get('ДисциплинаКод', '').strip() or None
+                obj_type = elem.get('ТипОбъекта', '')
+
+                if not name:
+                    continue
+
+                if obj_type == '2':  # дисциплина
+                    key = (name, code)
+                    if key not in seen_disciplines:
+                        seen_disciplines.add(key)
+                        disciplines.append(
+                            DisciplineDetail(discipline_name=name, discipline_code=code)
+                        )
+                elif obj_type == '3':  # практика
+                    key = (name, code)
+                    if key not in seen_practices:
+                        seen_practices.add(key)
+                        practices.append(
+                            PracticeDetail(discipline_name=name, discipline_code=code)
+                        )
+
+        return disciplines, practices
+
 class XmlParsingService:
 
     def __init__(self):
@@ -120,13 +153,12 @@ class XmlParsingService:
             applogger.error(f"Неожиданная ошибка при парсинге: {e}")
             return None
 
-    def extract_all(self, contents: list[bytes]) -> list[ResponseModel]:
+    def extract_all(self, contents: list[bytes]) -> list[ResponseModel | PracticeDetail]:
         results = []
-
         for content in contents:
             response = self.extract_from_content(content)
-            results.append(response)
-
+            if response:
+                results.append(response)
         return results
 
     def extract_from_content(self, content: bytes) -> ResponseModel | None:
@@ -139,7 +171,7 @@ class XmlParsingService:
         direction_code = PlxDataExtractor.extract_direction_code(root)
         direction_name, profile_name = PlxDataExtractor.extract_direction_name(root)
         start_year = PlxDataExtractor.extract_start_year(root)
-        disciplines = PlxDataExtractor.extract_disciplines_details(root)
+        disciplines, practices = PlxDataExtractor.extract_items(root)
 
         full_direction_name = f"{direction_name}, {profile_name}" if profile_name else direction_name
 
@@ -147,7 +179,8 @@ class XmlParsingService:
             direction_code=direction_code,
             direction_name=full_direction_name,
             start_year=start_year,
-            disciplines=disciplines
+            disciplines=disciplines,
+            practices=practices
         )
 
 class WebParsingService:
