@@ -6,6 +6,11 @@
 Монолитная архитекрура, но при этом она встрается в сервис.
 пример ссылки: https://mauniver.ru/sveden/education/op/43292#prak
 
+## Подготовительный этап
+1. На сервере должен быть установлен `docker` и `docker compose`
+2. Также необходим пакет `npm` для сборки tailwind
+
+
 ## Запуск
 
 ---
@@ -25,8 +30,7 @@ chmod +x setup.sh
 В логах должно отобразиться `Complete!!!`
 ![img.png](img.png)
 
-#### 3. запустите compose сборку
+#### 3. запустите compose сборку (из корня проекта)
 ```
-# из корня проекта
 docker compose -f docker-compose.prod.yml up --build --remove-orphans
 ```
