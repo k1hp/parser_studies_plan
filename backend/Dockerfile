@@ -2,14 +2,6 @@ FROM python:3.13-slim
 
 WORKDIR /fastapi-service
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    python3-dev \
-    libffi-dev \
-    libpango1.0-dev \
-    pkg-config \
-    && rm -rf /var/lib/apt/lists/*
-
 RUN pip install --no-cache-dir uv
 
 COPY pyproject.toml .env ./
