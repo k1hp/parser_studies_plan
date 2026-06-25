@@ -1,11 +1,24 @@
 <!DOCTYPE html>
-<html>
+<html class="bg-slate-950">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Список групп — Проверка учебных планов</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: { extend: { colors: { accent: { 400:'#818cf8', 500:'#6366f1', 600:'#4f46e5' } } } }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', system-ui, sans-serif; }
+    </style>
     <script>
         var APP_BASE = (function () {
-            var p = window.location.pathname;
+            var url = new URL(window.location.href);
+            if (!url.pathname.endsWith('/') && !url.pathname.split('/').pop().includes('.')) url.pathname += '/';
+            var p = url.pathname;
             return p.substring(0, p.lastIndexOf('/') + 1);
         })();
         var link = document.createElement('link');
@@ -14,117 +27,157 @@
         document.head.appendChild(link);
     </script>
 </head>
-<body>
-    <div class="content">
-        <header>
-            <h1>Список групп</h1>
-        </header>
+<body class="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950">
 
-        <div id="errorMessage" class="error-message" style="display:none;"></div>
+<div class="fixed top-20 left-10 w-72 h-72 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+<div class="fixed bottom-20 right-10 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
 
-        <div id="resultContent"></div>
+<header class="fixed top-0 inset-x-0 z-30 h-14 bg-slate-950/80 backdrop-blur-xl border-b border-white/5 flex items-center px-4 lg:px-8">
+    <a href="https://mauniver.ru/" class="flex items-center gap-3 hover:opacity-80 transition-opacity shrink-0">
+        <img src="pic/logo.PNG" alt="МАУ" class="h-9">
+    </a>
+    <div class="flex-1"></div>
+    <a href="" onclick="window.location.href=APP_BASE;return false"
+        class="text-xs text-slate-500 hover:text-slate-300 transition-colors flex items-center gap-1">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        Назад
+    </a>
+</header>
 
-        <div class="conteiner result-buttons" style="margin-top:24px;">
-            <button class="btn submitBtn" onclick="window.location.href = APP_BASE">Назад к форме</button>
-        </div>
-    </div>
+<main class="relative pt-20 pb-16 px-4">
+<div class="mx-auto max-w-4xl">
 
-    <script>
-        var elError = document.getElementById('errorMessage');
-        var elResult = document.getElementById('resultContent');
+    <h1 class="text-2xl font-bold tracking-tight mb-6">
+        <span class="bg-gradient-to-r from-indigo-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
+            Результаты проверки
+        </span>
+    </h1>
 
-        function esc(s) { return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    <div id="errorMessage" style="display:none;"
+        class="mb-6 p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm"></div>
 
-        function showError(msg) {
-            elError.style.display = 'block';
-            elError.innerHTML = 'Ошибка: ' + msg;
-            elResult.innerHTML = '';
+    <div id="resultContent"></div>
+
+</div>
+</main>
+
+<script>
+    var elError = document.getElementById('errorMessage');
+    var elResult = document.getElementById('resultContent');
+
+    function esc(s) { return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    function showError(msg) {
+        elError.style.display = 'block';
+        elError.innerHTML = 'Ошибка: ' + msg;
+        elResult.innerHTML = '';
+    }
+
+    function statusBadge(r) {
+        var cls, text;
+        if (r.status === 'ok' && r.data) {
+            cls = 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30';
+            text = 'OK';
+        } else if (r.status === 'url_not_found') {
+            cls = 'bg-rose-500/15 text-rose-300 border-rose-500/30';
+            text = 'Не найдена';
+        } else if (r.status === 'year_mismatch') {
+            cls = 'bg-yellow-500/15 text-yellow-300 border-yellow-500/30';
+            text = 'Год не найден';
+        } else {
+            cls = 'bg-rose-500/15 text-rose-300 border-rose-500/30';
+            text = 'Ошибка';
+        }
+        return '<span class="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider border ' + cls + '">' + text + '</span>';
+    }
+
+    function issuesSummary(r) {
+        if (r.status !== 'ok' || !r.data || !r.data.sections) return '';
+        var totalMissing = 0, totalExtra = 0;
+        Object.keys(r.data.sections).forEach(function(k) {
+            totalMissing += (r.data.sections[k].missing_on_site || []).length;
+            totalExtra   += (r.data.sections[k].missing_in_xml || []).length;
+        });
+        if (totalMissing === 0 && totalExtra === 0) return '<span class="text-xs text-emerald-400">Всё совпало</span>';
+        var parts = [];
+        if (totalMissing > 0) parts.push('&ndash;' + totalMissing + ' на сайте');
+        if (totalExtra > 0)   parts.push('+' + totalExtra + ' лишних');
+        return '<span class="text-xs text-yellow-400">' + parts.join(', ') + '</span>';
+    }
+
+    function renderList(data) {
+        var html = '';
+
+        // Summary stats — big cards
+        html += '<div class="flex gap-4 mb-6">';
+        html += '<div class="flex-1 bg-slate-800/40 backdrop-blur-sm border border-white/5 rounded-2xl p-5 text-center">';
+        html += '<div class="text-4xl font-bold text-emerald-400 tracking-tight">' + data.ok_count + '</div>';
+        html += '<div class="text-xs text-slate-500 mt-1.5 uppercase tracking-wider font-medium">OK</div>';
+        html += '</div>';
+        html += '<div class="flex-1 bg-slate-800/40 backdrop-blur-sm border border-white/5 rounded-2xl p-5 text-center">';
+        html += '<div class="text-4xl font-bold text-rose-400 tracking-tight">' + data.fail_count + '</div>';
+        html += '<div class="text-xs text-slate-500 mt-1.5 uppercase tracking-wider font-medium">Ошибки</div>';
+        html += '</div>';
+        html += '</div>';
+
+        // Table
+        html += '<div class="bg-slate-800/30 backdrop-blur-sm border border-white/5 rounded-2xl overflow-hidden">';
+        html += '<table class="w-full text-sm">';
+        html += '<thead><tr class="border-b border-white/5 text-slate-500 text-[11px] uppercase tracking-wider">';
+        html += '<th class="text-left px-5 py-3.5 font-medium">Направление (группа)</th>';
+        html += '<th class="text-left px-5 py-3.5 font-medium">Файл</th>';
+        html += '<th class="text-left px-5 py-3.5 font-medium">Статус</th>';
+        html += '<th class="text-left px-5 py-3.5 font-medium">Сводка</th>';
+        html += '</tr></thead><tbody class="divide-y divide-white/5">';
+
+        data.results.forEach(function(r, i) {
+            var groupName = r.direction_name || '—';
+            var clickable = r.status === 'ok' && r.data;
+            var rowCls = clickable
+                ? 'cursor-pointer hover:bg-indigo-500/10 transition-colors'
+                : 'opacity-50';
+            var onclick = clickable ? ' onclick="openDetail(' + i + ')"' : '';
+
+            html += '<tr class="' + rowCls + '"' + onclick + '>';
+            html += '<td class="px-5 py-4 font-medium text-slate-200 max-w-[220px] truncate" title="' + esc(groupName) + '">' + esc(groupName) + '</td>';
+            html += '<td class="px-5 py-4 text-slate-400 text-xs max-w-[180px] truncate" title="' + esc(r.filename) + '">' + esc(r.filename) + '</td>';
+            html += '<td class="px-5 py-4">' + statusBadge(r) + '</td>';
+            var summaryHtml = r.status === 'ok' ? issuesSummary(r) : '<span class="text-xs text-slate-500">' + esc((r.error || '').substring(0,80) || '—') + '</span>';
+            html += '<td class="px-5 py-4 text-xs">' + summaryHtml + '</td>';
+            html += '</tr>';
+        });
+
+        html += '</tbody></table></div>';
+
+        // Empty state
+        if (!data.results || data.results.length === 0) {
+            html = '<div class="text-center py-20 text-slate-500 text-sm">Нет результатов</div>';
         }
 
-        function statusBadge(r) {
-            var cls, text;
-            if (r.status === 'ok' && r.data) {
-                cls = 'card-ok'; text = 'OK';
-            } else if (r.status === 'url_not_found') {
-                cls = 'card-fail'; text = 'Не найдена';
-            } else if (r.status === 'year_mismatch') {
-                cls = 'card-warn'; text = 'Год не найден';
-            } else {
-                cls = 'card-fail'; text = 'Ошибка';
-            }
-            return '<span class="card-badge ' + cls + '">' + text + '</span>';
-        }
+        elResult.innerHTML = html;
+    }
 
-        function issuesPreview(r) {
-            if (r.status !== 'ok' || !r.data || !r.data.sections) return '';
-            var parts = [];
-            Object.keys(r.data.sections).forEach(function(k) {
-                var s = r.data.sections[k];
-                var ms = (s.missing_on_site || []).length;
-                var mx = (s.missing_in_xml || []).length;
-                if (ms > 0) parts.push('–' + ms + ' на сайте');
-                if (mx > 0) parts.push('+' + mx + ' лишних');
-            });
-            return parts.length ? '<span class="issues-preview">' + esc(parts.join(', ')) + '</span>' : '<span class="issues-preview ok">Все совпало</span>';
-        }
+    window.openDetail = function(index) {
+        var raw = localStorage.getItem('compareResults');
+        if (!raw) return;
+        var data = JSON.parse(raw);
+        var item = data.results[index];
+        localStorage.setItem('compareResult', JSON.stringify(item.data));
+        window.location.href = APP_BASE + 'report_detail.html';
+    };
 
-        function renderList(data) {
-            var html = '';
-
-            html += '<div class="batch-summary">';
-            html += '<div class="summary-stat ok">OK: ' + data.ok_count + '</div>';
-            html += '<div class="summary-stat fail">Ошибки: ' + data.fail_count + '</div>';
-            html += '</div>';
-
-            html += '<table class="batch-table">';
-            html += '<thead><tr>';
-            html += '<th>Направление (группа)</th>';
-            html += '<th>Файл</th>';
-            html += '<th>Статус</th>';
-            html += '<th>Совпадение</th>';
-            html += '</tr></thead><tbody>';
-
-            data.results.forEach(function(r, i) {
-                var groupName = r.direction_name || '—';
-                var clickable = r.status === 'ok' && r.data;
-                var cls = clickable ? ' class="clickable"' : ' class="not-clickable"';
-                var onclick = clickable ? ' onclick="openDetail(' + i + ')"' : '';
-
-                html += '<tr' + cls + onclick + '>';
-                html += '<td class="cell-group">' + esc(groupName) + '</td>';
-                html += '<td class="cell-file">' + esc(r.filename) + '</td>';
-                var errorText = r.error ? '<div class="cell-error">' + esc(r.error) + '</div>' : '';
-                html += '<td class="cell-status">' + statusBadge(r) + '<div class="cell-hint">' + issuesPreview(r) + '</div>' + errorText + '</td>';
-                html += '<td class="cell-score">' + (r.match_score > 0 ? Math.round(r.match_score) + '%' : '—') + '</td>';
-                html += '</tr>';
-            });
-
-            html += '</tbody></table>';
-
-            elResult.innerHTML = html;
-        }
-
-        window.openDetail = function(index) {
-            var raw = localStorage.getItem('compareResults');
-            if (!raw) return;
+    // ===== INIT =====
+    try {
+        var raw = localStorage.getItem('compareResults');
+        if (!raw || raw === 'undefined' || raw === 'null') {
+            showError('Результаты не найдены. Вернитесь на главную и отправьте данные заново.');
+        } else {
             var data = JSON.parse(raw);
-            var item = data.results[index];
-            localStorage.setItem('compareResult', JSON.stringify(item.data));
-            window.location.href = APP_BASE + 'report_detail.html';
-        };
-
-        // ===== INIT =====
-        try {
-            var raw = localStorage.getItem('compareResults');
-            if (!raw || raw === 'undefined' || raw === 'null') {
-                showError('Результаты не найдены. Вернитесь на главную и отправьте данные заново.');
-            } else {
-                var data = JSON.parse(raw);
-                renderList(data);
-            }
-        } catch(e) {
-            showError(e.message);
+            renderList(data);
         }
-    </script>
+    } catch(e) {
+        showError(e.message);
+    }
+</script>
 </body>
 </html>

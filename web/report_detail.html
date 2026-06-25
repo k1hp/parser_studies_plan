@@ -1,11 +1,24 @@
 <!DOCTYPE html>
-<html>
+<html class="bg-slate-950">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Отчёт по группе — Проверка учебных планов</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: { extend: { colors: { accent: { 400:'#818cf8', 500:'#6366f1', 600:'#4f46e5' } } } }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', system-ui, sans-serif; }
+    </style>
     <script>
         var APP_BASE = (function () {
-            var p = window.location.pathname;
+            var url = new URL(window.location.href);
+            if (!url.pathname.endsWith('/') && !url.pathname.split('/').pop().includes('.')) url.pathname += '/';
+            var p = url.pathname;
             return p.substring(0, p.lastIndexOf('/') + 1);
         })();
         var link = document.createElement('link');
@@ -14,385 +27,524 @@
         document.head.appendChild(link);
     </script>
 </head>
-<body>
-    <div class="content">
-        <header>
-            <h1>Отчёт по группе</h1>
-        </header>
+<body class="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950">
 
-        <div id="errorMessage" class="error-message" style="display:none;"></div>
+<div class="fixed top-20 left-10 w-72 h-72 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+<div class="fixed bottom-20 right-10 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
 
-        <div id="resultContent"></div>
+<header class="fixed top-0 inset-x-0 z-30 h-14 bg-slate-950/80 backdrop-blur-xl border-b border-white/5 flex items-center px-4 lg:px-8">
+    <a href="https://mauniver.ru/" class="flex items-center gap-3 hover:opacity-80 transition-opacity shrink-0">
+        <img src="pic/logo.PNG" alt="МАУ" class="h-9">
+    </a>
+    <div class="flex-1"></div>
+    <button onclick="window.location.href = APP_BASE"
+        class="text-xs text-slate-500 hover:text-slate-300 transition-colors flex items-center gap-1">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+        На главную
+    </button>
+</header>
 
-        <div class="conteiner result-buttons" style="margin-top:24px;">
-            <button class="btn submitBtn" onclick="window.location.href = APP_BASE">Назад к форме</button>
-            <button class="btn submitBtn" onclick="downloadReport('pdf')">Скачать PDF</button>
-            <button class="btn submitBtn" onclick="downloadReport('html')">Скачать HTML</button>
-        </div>
+<main class="relative pt-20 pb-16 px-4">
+<div class="mx-auto max-w-3xl">
+
+    <h1 class="text-2xl font-bold tracking-tight mb-6">
+        <span class="bg-gradient-to-r from-indigo-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
+            Отчёт по группе
+        </span>
+    </h1>
+
+    <div id="errorMessage" style="display:none;"
+        class="mb-6 p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm"></div>
+
+    <div id="resultContent"></div>
+
+    <!-- Action buttons -->
+    <div class="flex gap-3 mt-8">
+        <button onclick="downloadReport('pdf')"
+            class="flex-1 py-3 rounded-xl bg-gradient-to-r from-indigo-600 via-blue-600 to-purple-600 text-white font-semibold
+            shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/30 hover:brightness-110
+            transition-all active:scale-[0.98] text-sm">
+            Скачать PDF
+        </button>
+        <button onclick="downloadReport('html')"
+            class="flex-1 py-3 rounded-xl bg-slate-800/60 border border-white/5 text-slate-300 font-semibold
+            hover:bg-slate-700/50 hover:text-white transition-all active:scale-[0.98] text-sm">
+            Скачать HTML
+        </button>
     </div>
 
-    <script>
-        var elError = document.getElementById('errorMessage');
-        var elResult = document.getElementById('resultContent');
+</div>
+</main>
 
-        function esc(s) { return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+<script>
+    var elError = document.getElementById('errorMessage');
+    var elResult = document.getElementById('resultContent');
 
-        function showError(msg) {
-            elError.style.display = 'block';
-            elError.innerHTML = 'Ошибка: ' + msg;
-            elResult.innerHTML = '';
+    function esc(s) { return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    function showError(msg) {
+        elError.style.display = 'block';
+        elError.innerHTML = 'Ошибка: ' + msg;
+        elResult.innerHTML = '';
+    }
+
+    var SECTION_LABELS = {
+        working_programs: 'Рабочие программы дисциплин',
+        fos_materials: 'ФОС материалы',
+        practic_programs: 'Программы практик',
+        methodical_materials: 'Методические материалы'
+    };
+
+    var FLAG_LABELS = {
+        education_program: 'Образовательная программа',
+        calendar_graphic: 'Календарный учебный график',
+        education_plan: 'Учебный план',
+        gia_program: 'ГИА',
+        education_program_vosp: 'Рабочая программа воспитания',
+        curriculum_plan: 'Календарный план воспитательной работы'
+    };
+
+    // ===== SINGLE RESULT =====
+
+    function renderItem(item) {
+        var code = item.discipline_code
+            ? '<span class="inline-block bg-slate-700/50 text-slate-300 text-[11px] font-mono px-1.5 py-0.5 rounded mr-2">' + esc(item.discipline_code) + '</span>'
+            : '';
+        return '<div class="py-1.5 border-b border-white/5 text-sm text-slate-300">' + code + esc(item.discipline_name) + '</div>';
+    }
+
+    function renderSection(key, sec) {
+        var hasMissing = (sec.missing_on_site && sec.missing_on_site.length > 0);
+        var hasExtra = (sec.missing_in_xml && sec.missing_in_xml.length > 0);
+        var allOk = !hasMissing && !hasExtra;
+        var title = SECTION_LABELS[key] || key;
+
+        var html = '<div class="p-5 rounded-xl mb-4 border ' + (allOk
+            ? 'border-emerald-500/30 border-l-4 border-l-emerald-500 bg-emerald-500/5'
+            : 'border-yellow-500/30 border-l-4 border-l-yellow-500 bg-yellow-500/5') + '">';
+
+        html += '<div class="flex items-center gap-3 mb-3">';
+        html += '<span class="font-semibold text-slate-200">' + title + '</span>';
+        html += '<span class="text-[10px] px-2 py-0.5 rounded-full font-medium uppercase tracking-wider ' + (allOk
+            ? 'bg-emerald-500/20 text-emerald-300'
+            : 'bg-yellow-500/20 text-yellow-300') + '">' + (allOk ? 'Все совпало' : 'Есть расхождения') + '</span>';
+        html += '</div>';
+
+        if (allOk && sec.matched) {
+            html += '<div class="text-xs text-slate-500 mb-3">Совпало: ' + sec.matched.length + ' дисциплин</div>';
+        }
+        if (hasMissing) {
+            html += '<details open class="mt-2"><summary class="text-sm font-medium text-yellow-400 cursor-pointer hover:text-yellow-300 transition-colors">Отсутствуют на сайте (' + sec.missing_on_site.length + ')</summary>';
+            html += '<div class="mt-2 ml-2">' + sec.missing_on_site.map(renderItem).join('') + '</div>';
+            html += '</details>';
+        }
+        if (hasExtra) {
+            html += '<details open class="mt-2"><summary class="text-sm font-medium text-blue-400 cursor-pointer hover:text-blue-300 transition-colors">Лишние на сайте (' + sec.missing_in_xml.length + ')</summary>';
+            html += '<div class="mt-2 ml-2">' + sec.missing_in_xml.map(renderItem).join('') + '</div>';
+            html += '</details>';
         }
 
-        var SECTION_LABELS = {
-            working_programs: 'Рабочие программы дисциплин',
-            fos_materials: 'ФОС материалы',
-            practic_programs: 'Программы практик',
-            methodical_materials: 'Методические материалы'
-        };
+        html += '</div>';
+        return html;
+    }
 
-        var FLAG_LABELS = {
-            education_program: 'Образовательная программа',
-            calendar_graphic: 'Календарный учебный график',
-            education_plan: 'Учебный план',
-            gia_program: 'ГИА',
-            education_program_vosp: 'Рабочая программа воспитания',
-            curriculum_plan: 'Календарный план воспитательной работы'
-        };
+    function displaySingle(data) {
+        var html = '';
 
-        // ===== SINGLE RESULT =====
+        // Info block
+        html += '<div class="bg-slate-800/40 backdrop-blur-sm border border-white/5 rounded-2xl p-6 mb-4">';
+        html += '<h3 class="text-sm font-semibold text-slate-300 mb-4">Основная информация</h3>';
+        html += '<div class="space-y-2 text-sm">';
+        html += '<div class="flex"><span class="text-slate-500 w-48 shrink-0">Специальность</span><span class="text-slate-200">' + esc(data.specialty || '—') + '</span></div>';
+        html += '<div class="flex"><span class="text-slate-500 w-48 shrink-0">Код направления</span><span class="text-slate-200 font-mono">' + esc(data.discipline_code || '—') + '</span></div>';
+        html += '<div class="flex"><span class="text-slate-500 w-48 shrink-0">Год набора</span><span class="text-slate-200">' + esc(String(data.curriculum_year || '—')) + '</span></div>';
+        html += '<div class="flex"><span class="text-slate-500 w-48 shrink-0">Уровень образования</span><span class="text-slate-200">' + esc(data.lvl_education || '—') + '</span></div>';
+        html += '<div class="flex"><span class="text-slate-500 w-48 shrink-0">Форма обучения</span><span class="text-slate-200">' + esc(data.form_education || '—') + '</span></div>';
+        html += '</div>';
+        html += '</div>';
 
-        function renderItem(item) {
-            var code = item.discipline_code ? '<span class="code">' + esc(item.discipline_code) + '</span>' : '';
-            return '<div class="item">' + code + ' ' + esc(item.discipline_name) + '</div>';
-        }
-
-        function renderSection(key, sec) {
-            var hasMissing = (sec.missing_on_site && sec.missing_on_site.length > 0);
-            var hasExtra = (sec.missing_in_xml && sec.missing_in_xml.length > 0);
-            var allOk = !hasMissing && !hasExtra;
-            var title = SECTION_LABELS[key] || key;
-
-            var html = '<div class="section ' + (allOk ? 'ok' : 'warn') + '">';
-            html += '<div class="section-header">';
-            html += '<span class="section-title">' + title + '</span>';
-            html += '<span class="badge">' + (allOk ? 'Все совпало' : 'Есть расхождения') + '</span>';
-            html += '</div>';
-
-            if (allOk && sec.matched) {
-                html += '<div class="section-meta">Совпало: ' + sec.matched.length + ' дисциплин</div>';
-            }
-            if (hasMissing) {
-                html += '<details open><summary class="warn">Отсутствуют на сайте (' + sec.missing_on_site.length + ')</summary>';
-                html += '<div class="items">' + sec.missing_on_site.map(renderItem).join('') + '</div>';
-                html += '</details>';
-            }
-            if (hasExtra) {
-                html += '<details open><summary class="extra">Лишние на сайте (' + sec.missing_in_xml.length + ')</summary>';
-                html += '<div class="items">' + sec.missing_in_xml.map(renderItem).join('') + '</div>';
-                html += '</details>';
-            }
-
-            html += '</div>';
-            return html;
-        }
-
-        function displaySingle(data) {
-            var html = '';
-
-            html += '<div class="info-block">';
-            html += '<h3>Основная информация</h3>';
-            html += '<table class="info-table">';
-            html += '<tr><td>Специальность</td><td>' + esc(data.specialty) + '</td></tr>';
-            html += '<tr><td>Код направления</td><td>' + esc(data.discipline_code) + '</td></tr>';
-            html += '<tr><td>Год набора</td><td>' + esc(String(data.curriculum_year)) + '</td></tr>';
-            html += '<tr><td>Уровень образования</td><td>' + esc(data.lvl_education) + '</td></tr>';
-            html += '<tr><td>Форма обучения</td><td>' + esc(data.form_education) + '</td></tr>';
-            html += '</table>';
-            html += '</div>';
-
-            if (data.flags) {
-                html += '<div class="info-block">';
-                html += '<h3>Наличие разделов</h3>';
-                html += '<table class="info-table">';
-                Object.keys(FLAG_LABELS).forEach(function(k) {
-                    var ok = data.flags[k];
-                    html += '<tr><td>' + FLAG_LABELS[k] + '</td>';
-                    html += '<td class="' + (ok ? 'good' : 'bad') + '">' + (ok ? 'Есть' : 'Отсутствует') + '</td></tr>';
-                });
-                html += '</table>';
+        // Flags
+        if (data.flags) {
+            html += '<div class="bg-slate-800/40 backdrop-blur-sm border border-white/5 rounded-2xl p-6 mb-4">';
+            html += '<h3 class="text-sm font-semibold text-slate-300 mb-4">Наличие разделов</h3>';
+            html += '<div class="space-y-1.5 text-sm">';
+            Object.keys(FLAG_LABELS).forEach(function(k) {
+                var ok = data.flags[k];
+                html += '<div class="flex items-center justify-between py-1.5 border-b border-white/5 last:border-0">';
+                html += '<span class="text-slate-400">' + FLAG_LABELS[k] + '</span>';
+                html += ok
+                    ? '<span class="text-emerald-400 font-semibold flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>Есть</span>'
+                    : '<span class="text-rose-400 font-semibold flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>Отсутствует</span>';
                 html += '</div>';
-            }
-
-            if (data.sections) {
-                html += '<h3>Сравнение по разделам</h3>';
-                Object.keys(data.sections).forEach(function(k) {
-                    html += renderSection(k, data.sections[k]);
-                });
-            }
-
-            elResult.innerHTML = html;
-        }
-
-        // ===== BATCH RESULT =====
-
-        function cardBadge(result) {
-            var cls, text;
-            if (result.status === 'ok' && result.data) {
-                var hasIssues = false;
-                var secs = result.data.sections || {};
-                Object.keys(secs).forEach(function(k) {
-                    if ((secs[k].missing_on_site && secs[k].missing_on_site.length) ||
-                        (secs[k].missing_in_xml && secs[k].missing_in_xml.length)) {
-                        hasIssues = true;
-                    }
-                });
-                cls = hasIssues ? 'card-warn' : 'card-ok';
-                text = hasIssues ? 'Есть расхождения' : 'Все совпало';
-            } else if (result.status === 'url_not_found') {
-                cls = 'card-fail'; text = 'Программа не найдена';
-            } else if (result.status === 'year_mismatch') {
-                cls = 'card-warn'; text = 'Год не найден на сайте';
-            } else {
-                cls = 'card-fail'; text = 'Ошибка парсинга';
-            }
-            return '<span class="card-badge ' + cls + '">' + text + '</span>';
-        }
-
-        function cardSummary(result) {
-            if (result.status !== 'ok' || !result.data) {
-                return '<div class="card-error">' + esc(result.error || 'Неизвестная ошибка') + '</div>';
-            }
-            var d = result.data;
-            var lines = [
-                ['Код направления', d.discipline_code],
-                ['Год набора', d.curriculum_year],
-                ['Уровень', d.lvl_education],
-                ['Форма', d.form_education],
-            ];
-            var html = '<div class="card-meta">';
-            lines.forEach(function(l) {
-                html += '<div class="meta-row"><span>' + l[0] + ':</span> ' + esc(String(l[1])) + '</div>';
             });
             html += '</div>';
+            html += '</div>';
+        }
 
-            // Quick mismatch counters
-            var secs = d.sections || {};
-            var issues = [];
+        // Sections
+        if (data.sections) {
+            html += '<h3 class="text-sm font-semibold text-slate-300 mb-4">Сравнение по разделам</h3>';
+            Object.keys(data.sections).forEach(function(k) {
+                html += renderSection(k, data.sections[k]);
+            });
+        }
+
+        elResult.innerHTML = html;
+    }
+
+    // ===== BATCH RESULT =====
+
+    function cardBadge(result) {
+        var cls, text;
+        if (result.status === 'ok' && result.data) {
+            var hasIssues = false;
+            var secs = result.data.sections || {};
             Object.keys(secs).forEach(function(k) {
-                var ms = (secs[k].missing_on_site || []).length;
-                var mx = (secs[k].missing_in_xml || []).length;
-                if (ms + mx > 0) {
-                    issues.push(SECTION_LABELS[k] + ': ' + (ms ? '-' + ms + ' на сайте ' : '') + (mx ? '+' + mx + ' лишних' : ''));
+                if ((secs[k].missing_on_site && secs[k].missing_on_site.length) ||
+                    (secs[k].missing_in_xml && secs[k].missing_in_xml.length)) {
+                    hasIssues = true;
                 }
             });
-            if (issues.length) {
-                html += '<div class="card-issues">' + issues.join('<br>') + '</div>';
-            }
-            return html;
+            cls = hasIssues
+                ? 'bg-yellow-500/15 text-yellow-300 border-yellow-500/30'
+                : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30';
+            text = hasIssues ? 'Есть расхождения' : 'Все совпало';
+        } else if (result.status === 'url_not_found') {
+            cls = 'bg-rose-500/15 text-rose-300 border-rose-500/30';
+            text = 'Программа не найдена';
+        } else if (result.status === 'year_mismatch') {
+            cls = 'bg-yellow-500/15 text-yellow-300 border-yellow-500/30';
+            text = 'Год не найден на сайте';
+        } else {
+            cls = 'bg-rose-500/15 text-rose-300 border-rose-500/30';
+            text = 'Ошибка парсинга';
         }
+        return '<span class="inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider border ' + cls + '">' + text + '</span>';
+    }
 
-        function renderCardDetail(result) {
-            if (result.status !== 'ok' || !result.data) return '';
-            var d = result.data;
-            var html = '<div style="margin-top:16px;padding-top:16px;border-top:1px solid #e0e0e0;">';
-
-            if (d.flags) {
-                html += '<div style="margin-bottom:16px"><h4 style="margin:0 0 8px 0">Наличие разделов</h4>';
-                html += '<table class="info-table">';
-                Object.keys(FLAG_LABELS).forEach(function(k) {
-                    var ok = d.flags[k];
-                    html += '<tr><td>' + FLAG_LABELS[k] + '</td><td class="' + (ok ? 'good' : 'bad') + '">' + (ok ? 'Есть' : 'Отсутствует') + '</td></tr>';
-                });
-                html += '</table></div>';
-            }
-
-            if (d.sections) {
-                Object.keys(d.sections).forEach(function(k) {
-                    html += renderSection(k, d.sections[k]);
-                });
-            }
-            html += '</div>';
-            return html;
+    function cardSummary(result) {
+        if (result.status !== 'ok' || !result.data) {
+            return '<div class="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-300 text-sm">' + esc(result.error || 'Неизвестная ошибка') + '</div>';
         }
+        var d = result.data;
+        var html = '<div class="grid grid-cols-2 gap-x-6 gap-y-1.5 text-sm">';
+        html += '<div><span class="text-slate-500">Код направления:</span> <span class="text-slate-200 font-mono">' + esc(String(d.discipline_code || '—')) + '</span></div>';
+        html += '<div><span class="text-slate-500">Год набора:</span> <span class="text-slate-200">' + esc(String(d.curriculum_year || '—')) + '</span></div>';
+        html += '<div><span class="text-slate-500">Уровень:</span> <span class="text-slate-200">' + esc(d.lvl_education || '—') + '</span></div>';
+        html += '<div><span class="text-slate-500">Форма:</span> <span class="text-slate-200">' + esc(d.form_education || '—') + '</span></div>';
+        html += '</div>';
 
-        function displayBatch(data) {
-            var html = '';
+        // Quick mismatch counters
+        var secs = d.sections || {};
+        var issues = [];
+        Object.keys(secs).forEach(function(k) {
+            var ms = (secs[k].missing_on_site || []).length;
+            var mx = (secs[k].missing_in_xml || []).length;
+            if (ms + mx > 0) {
+                issues.push(SECTION_LABELS[k] + ': ' + (ms ? '&ndash;' + ms + ' на сайте ' : '') + (mx ? '+' + mx + ' лишних' : ''));
+            }
+        });
+        if (issues.length) {
+            html += '<div class="mt-3 space-y-0.5 text-sm text-yellow-400">' + issues.join('<br>') + '</div>';
+        }
+        return html;
+    }
 
-            // Summary bar
-            html += '<div class="batch-summary">';
-            html += '<div class="summary-stat ok">OK: ' + data.ok_count + '</div>';
-            html += '<div class="summary-stat fail">Ошибки: ' + data.fail_count + '</div>';
-            html += '</div>';
+    function renderCardDetail(result) {
+        if (result.status !== 'ok' || !result.data) return '';
+        var d = result.data;
+        var html = '<div class="mt-4 pt-4 border-t border-white/10">';
 
-            // Cards
-            html += '<div class="cards">';
-            data.results.forEach(function(r, i) {
-                html += '<div class="card">';
-                html += '<div class="card-header" onclick="this.parentNode.classList.toggle(\'expanded\')">';
-                html += '<div class="card-left">';
-                html += '<div class="card-filename">' + esc(r.filename) + '</div>';
-                if (r.direction_name) {
-                    html += '<div class="card-direction">' + esc(r.direction_name) + '</div>';
-                }
-                html += '</div>';
-                html += '<div class="card-right">';
-                if (r.match_score > 0) {
-                    html += '<span class="score">' + Math.round(r.match_score) + '%</span>';
-                }
-                html += cardBadge(r);
-                html += '<span class="card-arrow">&#9660;</span>';
-                html += '</div>';
-                html += '</div>';
-
-                html += '<div class="card-body">';
-                html += cardSummary(r);
-                html += renderCardDetail(r);
-                html += '</div>';
-
+        if (d.flags) {
+            html += '<h4 class="text-sm font-semibold text-slate-400 mb-3">Наличие разделов</h4>';
+            html += '<div class="space-y-1.5 text-sm mb-4">';
+            Object.keys(FLAG_LABELS).forEach(function(k) {
+                var ok = d.flags[k];
+                html += '<div class="flex items-center justify-between py-1.5 border-b border-white/5 last:border-0">';
+                html += '<span class="text-slate-400">' + FLAG_LABELS[k] + '</span>';
+                html += ok
+                    ? '<span class="text-emerald-400 font-semibold">Есть</span>'
+                    : '<span class="text-rose-400 font-semibold">Отсутствует</span>';
                 html += '</div>';
             });
             html += '</div>';
-
-            elResult.innerHTML = html;
         }
 
-        // ===== DOWNLOAD =====
-
-        window.allData = null;
-
-        function buildReportHtml(data) {
-            var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Отчёт</title><style>';
-            html += 'body{font-family:Arial,sans-serif;max-width:800px;margin:0 auto;padding:20px;color:#333}';
-            html += 'h1{text-align:center}h3{margin:16px 0 8px 0}.ok{color:#2e7d32;font-weight:bold}.bad{color:#c62828;font-weight:bold}';
-            html += 'table{border-collapse:collapse;width:100%;margin:8px 0 16px 0}';
-            html += 'td{padding:4px 12px;border-bottom:1px solid #e0e0e0}';
-            html += 'td:first-child{font-weight:bold;width:60%}';
-            html += '.section{border:1px solid #e0e0e0;border-radius:10px;padding:15px;margin-bottom:16px}';
-            html += '.s-ok{border-left:4px solid #2e7d32}.s-warn{border-left:4px solid #e65100}';
-            html += '.badge-ok{background:#e8f5e9;color:#2e7d32;padding:2px 8px;border-radius:4px;display:inline-block;margin-left:8px}';
-            html += '.badge-warn{background:#fff3e0;color:#e65100;padding:2px 8px;border-radius:4px;display:inline-block;margin-left:8px}';
-            html += 'summary{cursor:pointer;margin:8px 0}summary.warn{color:#e65100}summary.extra{color:#1565c0}';
-            html += '.item{padding:4px 0;border-bottom:1px solid #f0f0f0}.code{background:#e0e0e0;padding:1px 6px;border-radius:3px}';
-            html += '.footer{text-align:center;color:#999;font-size:12px;margin-top:32px}';
-            html += '@media print{body{max-width:100%}.result-buttons{display:none}}';
-            html += '</style></head><body>';
-            html += '<h1>Отчёт по учебному плану</h1>';
-
-            html += '<h3>Основная информация</h3>';
-            html += '<table>';
-            html += '<tr><td>Специальность</td><td>' + esc(data.specialty) + '</td></tr>';
-            html += '<tr><td>Код направления</td><td>' + esc(data.discipline_code) + '</td></tr>';
-            html += '<tr><td>Год набора</td><td>' + esc(String(data.curriculum_year)) + '</td></tr>';
-            html += '<tr><td>Уровень образования</td><td>' + esc(data.lvl_education) + '</td></tr>';
-            html += '<tr><td>Форма обучения</td><td>' + esc(data.form_education) + '</td></tr>';
-            html += '</table>';
-
-            if (data.flags) {
-                html += '<h3>Наличие разделов</h3><table>';
-                var fl = [
-                    ['Образовательная программа', 'education_program'],
-                    ['Календарный учебный график', 'calendar_graphic'],
-                    ['Учебный план', 'education_plan'],
-                    ['ГИА', 'gia_program'],
-                    ['Рабочая программа воспитания', 'education_program_vosp'],
-                    ['Календарный план ВР', 'curriculum_plan']
-                ];
-                fl.forEach(function(f) {
-                    var ok = data.flags[f[1]];
-                    html += '<tr><td>' + f[0] + '</td><td class="' + (ok ? 'ok' : 'bad') + '">' + (ok ? 'Есть' : 'Отсутствует') + '</td></tr>';
-                });
-                html += '</table>';
-            }
-
-            if (data.sections) {
-                html += '<h3>Сравнение по разделам</h3>';
-                var sn = SECTION_LABELS;
-                Object.keys(data.sections).forEach(function(k) {
-                    var s = data.sections[k];
-                    var ok = !(s.missing_on_site && s.missing_on_site.length) && !(s.missing_in_xml && s.missing_in_xml.length);
-                    html += '<div class="section ' + (ok ? 's-ok' : 's-warn') + '">';
-                    html += '<span style="font-weight:bold;font-size:15pt">' + (sn[k] || k) + '</span>';
-                    html += ok ? '<span class="badge-ok">Все совпало</span>' : '<span class="badge-warn">Есть расхождения</span>';
-                    if (ok) {
-                        html += '<div style="color:#666;margin-top:8px">Совпало: ' + (s.matched ? s.matched.length : 0) + ' дисциплин</div>';
-                    }
-                    if (s.missing_on_site && s.missing_on_site.length) {
-                        html += '<details open><summary class="warn">Отсутствуют на сайте (' + s.missing_on_site.length + ')</summary>';
-                        s.missing_on_site.forEach(function(d) {
-                            html += '<div class="item"><span class="code">' + esc(d.discipline_code || '-') + '</span> ' + esc(d.discipline_name) + '</div>';
-                        });
-                        html += '</details>';
-                    }
-                    if (s.missing_in_xml && s.missing_in_xml.length) {
-                        html += '<details open><summary class="extra">Лишние на сайте (' + s.missing_in_xml.length + ')</summary>';
-                        s.missing_in_xml.forEach(function(d) {
-                            html += '<div class="item"><span class="code">' + esc(d.discipline_code || '-') + '</span> ' + esc(d.discipline_name) + '</div>';
-                        });
-                        html += '</details>';
-                    }
-                    html += '</div>';
-                });
-            }
-
-            html += '<div class="footer">Сформировано ' + new Date().toLocaleString('ru-RU') + ' | Система проверки учебных планов</div>';
-            html += '</body></html>';
-            return html;
+        if (d.sections) {
+            Object.keys(d.sections).forEach(function(k) {
+                html += renderSection(k, d.sections[k]);
+            });
         }
+        html += '</div>';
+        return html;
+    }
 
-        window.downloadReport = function(format) {
-            var wdata = window.allData;
-            if (!wdata) { alert('Результаты не найдены.'); return; }
+    function displayBatch(data) {
+        var html = '';
 
-            if (wdata.results) {
-                // Batch — показываем каждую ок-карточку
-                var okResults = wdata.results.filter(function(r) { return r.status === 'ok' && r.data; });
-                var parts = [];
-                okResults.forEach(function(r) {
-                    parts.push('<h2>' + esc(r.filename) + ' (' + Math.round(r.match_score) + '% match)</h2>');
-                    if (r.matched_url) parts.push('<p style="color:#666">' + esc(r.matched_url) + '</p>');
-                    parts.push(buildReportHtml(r.data));
-                });
-                var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{font-family:Arial;max-width:900px;margin:0 auto;padding:20px}h2{border-top:2px solid #333;padding-top:20px;margin-top:30px}</style></head><body>' + parts.join('') + '</body></html>';
-            } else {
-                var html = buildReportHtml(wdata);
+        // Summary bar
+        html += '<div class="flex gap-4 mb-6">';
+        html += '<div class="flex-1 bg-slate-800/40 backdrop-blur-sm border border-white/5 rounded-2xl p-5 text-center">';
+        html += '<div class="text-4xl font-bold text-emerald-400 tracking-tight">' + data.ok_count + '</div>';
+        html += '<div class="text-xs text-slate-500 mt-1.5 uppercase tracking-wider font-medium">OK</div>';
+        html += '</div>';
+        html += '<div class="flex-1 bg-slate-800/40 backdrop-blur-sm border border-white/5 rounded-2xl p-5 text-center">';
+        html += '<div class="text-4xl font-bold text-rose-400 tracking-tight">' + data.fail_count + '</div>';
+        html += '<div class="text-xs text-slate-500 mt-1.5 uppercase tracking-wider font-medium">Ошибки</div>';
+        html += '</div>';
+        html += '</div>';
+
+        // Cards
+        html += '<div class="space-y-3">';
+        data.results.forEach(function(r, i) {
+            html += '<div class="bg-slate-800/40 backdrop-blur-sm border border-white/5 rounded-2xl overflow-hidden">';
+
+            // Card header
+            html += '<div class="flex items-center gap-4 p-5 cursor-pointer hover:bg-slate-700/30 transition-colors select-none" onclick="this.parentElement.classList.toggle(\'active\')">';
+            html += '<div class="flex-1 min-w-0">';
+            html += '<div class="font-medium text-slate-200 text-sm truncate">' + esc(r.filename) + '</div>';
+            if (r.direction_name) {
+                html += '<div class="text-xs text-slate-400 mt-0.5 truncate">' + esc(r.direction_name) + '</div>';
             }
-
-            if (format === 'html') {
-                var blob = new Blob([html], {type: 'text/html;charset=utf-8'});
-                var a = document.createElement('a');
-                a.href = URL.createObjectURL(blob);
-                a.download = 'report_' + new Date().toISOString().slice(0,19).replace(/:/g,'-') + '.html';
-                a.click();
-                URL.revokeObjectURL(a.href);
-            } else {
-                var w = window.open('');
-                w.document.write(html);
-                w.document.close();
-                w.onload = function() { w.print(); };
+            html += '</div>';
+            html += '<div class="flex items-center gap-3 shrink-0">';
+            if (r.match_score > 0) {
+                var scoreColor = r.match_score >= 90 ? 'text-emerald-400' : r.match_score >= 70 ? 'text-emerald-300' : 'text-yellow-400';
+                html += '<span class="font-mono font-semibold text-sm ' + scoreColor + '">' + Math.round(r.match_score) + '%</span>';
             }
-        };
+            html += cardBadge(r);
+            html += '<svg class="w-4 h-4 text-slate-500 transition-transform chevron-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>';
+            html += '</div>';
+            html += '</div>';
 
-        // ===== INIT =====
+            // Card body
+            html += '<div class="hidden px-5 pb-5 border-t border-white/5">';
+            html += '<div class="pt-4">';
+            html += cardSummary(r);
+            html += renderCardDetail(r);
+            html += '</div>';
+            html += '</div>';
 
-        try {
-            var raw = localStorage.getItem('compareResult');
-            if (!raw || raw === 'undefined' || raw === 'null') {
-                raw = localStorage.getItem('compareResults');
-            }
-            if (!raw || raw === 'undefined' || raw === 'null') {
-                showError('Результаты не найдены. Вернитесь на главную и отправьте данные заново.');
-            } else {
-                var data = JSON.parse(raw);
-                window.allData = data;
-                if (data.results) {
-                    displayBatch(data);
+            html += '</div>';
+        });
+        html += '</div>';
+
+        elResult.innerHTML = html;
+
+        // Chevron rotation on toggle
+        elResult.querySelectorAll('.active').forEach(function(card) {
+            card.classList.remove('active');
+        });
+        elResult.querySelectorAll('[onclick*="active"]').forEach(function(header) {
+            header.addEventListener('click', function() {
+                var card = header.parentElement;
+                var body = card.querySelector('.hidden');
+                var chevron = header.querySelector('.chevron-icon');
+                if (body.classList.contains('hidden')) {
+                    body.classList.remove('hidden');
+                    chevron.style.transform = 'rotate(180deg)';
                 } else {
-                    displaySingle(data);
+                    body.classList.add('hidden');
+                    chevron.style.transform = '';
                 }
-            }
-        } catch(e) {
-            showError(e.message);
+            });
+        });
+    }
+
+    // ===== DOWNLOAD =====
+
+    window.allData = null;
+
+    var REPORT_CSS = ''
+        + '@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");'
+        + '*{margin:0;padding:0;box-sizing:border-box}'
+        + 'body{font-family:Inter,system-ui,-apple-system,sans-serif;color:#1e293b;background:#fff;line-height:1.6}'
+        + '.page{max-width:820px;margin:0 auto;padding:32px 24px}'
+        + '.report-header{text-align:center;padding:32px 0 24px;border-bottom:3px solid #e2e8f0;margin-bottom:28px}'
+        + '.report-header .org{font-size:13px;color:#64748b;text-transform:uppercase;letter-spacing:.12em;margin-bottom:8px}'
+        + '.report-header h1{font-size:26px;font-weight:800;color:#0f172a;margin:0}'
+        + '.report-header .meta{font-size:13px;color:#94a3b8;margin-top:6px}'
+        + 'h2.section-title{font-size:17px;font-weight:700;color:#0f172a;margin:28px 0 12px;padding-bottom:6px;border-bottom:2px solid #e2e8f0}'
+        + '.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;margin-bottom:8px}'
+        + '.info-row{display:flex;border-bottom:1px solid #f1f5f9}'
+        + '.info-row:last-child{border-bottom:none}'
+        + '.info-row .label{width:180px;flex-shrink:0;padding:10px 16px;font-size:13px;font-weight:600;color:#475569;background:#f8fafc}'
+        + '.info-row .value{padding:10px 16px;font-size:14px;color:#0f172a}'
+        + '.flag-table{width:100%;border-collapse:collapse;margin-bottom:8px}'
+        + '.flag-table td{padding:8px 16px;font-size:14px;border-bottom:1px solid #f1f5f9}'
+        + '.flag-table tr:last-child td{border-bottom:none}'
+        + '.flag-table .flag-label{font-weight:600;color:#475569}'
+        + '.flag-table .flag-ok{color:#16a34a;font-weight:700;text-align:right}'
+        + '.flag-table .flag-bad{color:#dc2626;font-weight:700;text-align:right}'
+        + '.section-card{border:1px solid #e2e8f0;border-radius:10px;padding:20px;margin-bottom:14px;page-break-inside:avoid}'
+        + '.section-card.ok{border-left:5px solid #22c55e}'
+        + '.section-card.warn{border-left:5px solid #eab308}'
+        + '.section-card .card-head{display:flex;align-items:center;gap:12px;margin-bottom:10px}'
+        + '.section-card .card-head h3{font-size:16px;font-weight:700;color:#0f172a}'
+        + '.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}'
+        + '.badge-ok{background:#dcfce7;color:#15803d}'
+        + '.badge-warn{background:#fef9c3;color:#a16207}'
+        + '.matched-count{font-size:13px;color:#64748b;margin-bottom:6px}'
+        + 'details{margin-top:8px}'
+        + 'details summary{font-size:13px;font-weight:600;padding:6px 0;cursor:pointer;outline:none;user-select:none}'
+        + 'details summary:hover{opacity:.8}'
+        + 'details summary.warn{color:#a16207}'
+        + 'details summary.extra{color:#2563eb}'
+        + '.discipline-list{margin:6px 0 0 12px}'
+        + '.discipline-item{display:flex;align-items:baseline;gap:8px;padding:5px 0;font-size:13px;border-bottom:1px solid #f8fafc}'
+        + '.discipline-item:last-child{border-bottom:none}'
+        + '.disc-code{display:inline-block;background:#f1f5f9;color:#475569;font-family:"SF Mono","Fira Code","Consolas",monospace;font-size:11px;padding:1px 7px;border-radius:4px;white-space:nowrap}'
+        + '.disc-name{color:#334155}'
+        + '.report-footer{text-align:center;padding:28px 0 8px;margin-top:24px;border-top:1px solid #e2e8f0;font-size:12px;color:#94a3b8}'
+        + '.batch-separator{border:0;border-top:2px dashed #cbd5e1;margin:32px 0}'
+        + '.batch-file-title{font-size:18px;font-weight:700;color:#0f172a;margin-bottom:2px}'
+        + '.batch-file-url{font-size:13px;color:#64748b;margin-bottom:12px;word-break:break-all}'
+        + '@media print{'
+        + '  body{font-size:12px}'
+        + '  .page{max-width:100%;padding:16px}'
+        + '  .section-card{break-inside:avoid;page-break-inside:avoid}'
+        + '  .batch-separator{break-after:page}'
+        + '  details[open] summary{color:inherit}'
+        + '}';
+
+    function buildReportHtml(data) {
+        var h = '';
+        h += '<div class="report-header">';
+        h += '<div class="org">Мурманский арктический университет</div>';
+        h += '<h1>Отчёт проверки учебного плана</h1>';
+        h += '<div class="meta">' + new Date().toLocaleDateString('ru-RU', {day:'numeric',month:'long',year:'numeric'}) + '</div>';
+        h += '</div>';
+
+        h += '<h2 class="section-title">Основная информация</h2>';
+        h += '<div class="info-grid">';
+        h += '<div class="info-row"><span class="label">Специальность</span><span class="value">' + esc(data.specialty || '—') + '</span></div>';
+        h += '<div class="info-row"><span class="label">Код направления</span><span class="value">' + esc(data.discipline_code || '—') + '</span></div>';
+        h += '<div class="info-row"><span class="label">Год набора</span><span class="value">' + esc(String(data.curriculum_year || '—')) + '</span></div>';
+        h += '<div class="info-row"><span class="label">Уровень образования</span><span class="value">' + esc(data.lvl_education || '—') + '</span></div>';
+        h += '<div class="info-row"><span class="label">Форма обучения</span><span class="value">' + esc(data.form_education || '—') + '</span></div>';
+        h += '</div>';
+
+        if (data.flags) {
+            h += '<h2 class="section-title">Наличие разделов на сайте</h2>';
+            h += '<table class="flag-table">';
+            var fl = [
+                ['Образовательная программа', 'education_program'],
+                ['Календарный учебный график', 'calendar_graphic'],
+                ['Учебный план', 'education_plan'],
+                ['Государственная итоговая аттестация', 'gia_program'],
+                ['Рабочая программа воспитания', 'education_program_vosp'],
+                ['Календарный план воспитательной работы', 'curriculum_plan']
+            ];
+            fl.forEach(function(f) {
+                var ok = data.flags[f[1]];
+                h += '<tr><td class="flag-label">' + f[0] + '</td><td class="' + (ok ? 'flag-ok' : 'flag-bad') + '">' + (ok ? '✓ Есть' : '✗ Отсутствует') + '</td></tr>';
+            });
+            h += '</table>';
         }
-    </script>
+
+        if (data.sections) {
+            h += '<h2 class="section-title">Сравнение дисциплин</h2>';
+            var sn = SECTION_LABELS;
+            Object.keys(data.sections).forEach(function(k) {
+                var s = data.sections[k];
+                var allOk = !(s.missing_on_site && s.missing_on_site.length) && !(s.missing_in_xml && s.missing_in_xml.length);
+                h += '<div class="section-card ' + (allOk ? 'ok' : 'warn') + '">';
+                h += '<div class="card-head"><h3>' + (sn[k] || k) + '</h3>';
+                h += allOk ? '<span class="badge badge-ok">Все совпало</span>' : '<span class="badge badge-warn">Есть расхождения</span>';
+                h += '</div>';
+                if (allOk && s.matched) {
+                    h += '<div class="matched-count">Совпавших дисциплин: ' + s.matched.length + '</div>';
+                }
+                if (s.missing_on_site && s.missing_on_site.length) {
+                    h += '<details open><summary class="warn">▼ Отсутствуют на сайте (' + s.missing_on_site.length + ')</summary>';
+                    h += '<div class="discipline-list">';
+                    s.missing_on_site.forEach(function(d) {
+                        h += '<div class="discipline-item"><span class="disc-code">' + esc(d.discipline_code || '—') + '</span><span class="disc-name">' + esc(d.discipline_name) + '</span></div>';
+                    });
+                    h += '</div></details>';
+                }
+                if (s.missing_in_xml && s.missing_in_xml.length) {
+                    h += '<details open><summary class="extra">▼ Присутствуют на сайте, но не найдены в плане (' + s.missing_in_xml.length + ')</summary>';
+                    h += '<div class="discipline-list">';
+                    s.missing_in_xml.forEach(function(d) {
+                        h += '<div class="discipline-item"><span class="disc-code">' + esc(d.discipline_code || '—') + '</span><span class="disc-name">' + esc(d.discipline_name) + '</span></div>';
+                    });
+                    h += '</div></details>';
+                }
+                h += '</div>';
+            });
+        }
+
+        h += '<div class="report-footer">Сформировано ' + new Date().toLocaleString('ru-RU') + ' · Система проверки учебных планов · МАУ</div>';
+        return h;
+    }
+
+    window.downloadReport = function(format) {
+        var wdata = window.allData;
+        if (!wdata) { alert('Результаты не найдены.'); return; }
+
+        var bodyHtml;
+        if (wdata.results) {
+            var okResults = wdata.results.filter(function(r) { return r.status === 'ok' && r.data; });
+            var parts = [];
+            okResults.forEach(function(r, idx) {
+                if (idx > 0) parts.push('<hr class="batch-separator">');
+                parts.push('<div class="batch-file-title">' + esc(r.filename) + ' · совпадение ' + Math.round(r.match_score) + '%</div>');
+                if (r.matched_url) parts.push('<div class="batch-file-url">' + esc(r.matched_url) + '</div>');
+                parts.push(buildReportHtml(r.data));
+            });
+            bodyHtml = parts.join('\n');
+        } else {
+            bodyHtml = buildReportHtml(wdata);
+        }
+
+        var fullHtml = '<!DOCTYPE html>\n'
+            + '<html lang="ru">\n<head>\n<meta charset="utf-8">\n'
+            + '<title>Отчёт проверки учебного плана</title>\n'
+            + '<style>' + REPORT_CSS + '</style>\n'
+            + '</head>\n<body><div class="page">\n'
+            + bodyHtml
+            + '\n</div></body>\n</html>';
+
+        if (format === 'html') {
+            var blob = new Blob([fullHtml], {type: 'text/html;charset=utf-8'});
+            var a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = 'otchet_' + new Date().toISOString().slice(0,10) + '.html';
+            a.click();
+            URL.revokeObjectURL(a.href);
+        } else {
+            var w = window.open('', '_blank');
+            w.document.write(fullHtml);
+            w.document.close();
+            // Wait for fonts to load before printing
+            w.document.fonts && w.document.fonts.ready
+                ? w.document.fonts.ready.then(function() { w.print(); })
+                : setTimeout(function() { w.print(); }, 600);
+        }
+    };
+
+    // ===== INIT =====
+
+    try {
+        var raw = localStorage.getItem('compareResult');
+        if (!raw || raw === 'undefined' || raw === 'null') {
+            raw = localStorage.getItem('compareResults');
+        }
+        if (!raw || raw === 'undefined' || raw === 'null') {
+            showError('Результаты не найдены. Вернитесь на главную и отправьте данные заново.');
+        } else {
+            var data = JSON.parse(raw);
+            window.allData = data;
+            if (data.results) {
+                displayBatch(data);
+            } else {
+                displaySingle(data);
+            }
+        }
+    } catch(e) {
+        showError(e.message);
+    }
+</script>
 </body>
 </html>

@@ -1,562 +1,742 @@
 <!DOCTYPE html>
-<html>
+<html class="bg-slate-950">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Проверка учебных планов</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            plugins: [],
+            theme: {
+                extend: {
+                    colors: {
+                        accent: { 400:'#818cf8', 500:'#6366f1', 600:'#4f46e5' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+        body { font-family: 'Inter', system-ui, sans-serif; }
+    </style>
     <script>
         var APP_BASE = (function () {
-        var url = new URL(window.location.href);
-
-        if (!url.pathname.endsWith('/') && !url.pathname.split('/').pop().includes('.')) {
-            url.pathname += '/';
-        }
-
-        var p = url.pathname;
-        return p.substring(0, p.lastIndexOf('/') + 1);
+            var url = new URL(window.location.href);
+            if (!url.pathname.endsWith('/') && !url.pathname.split('/').pop().includes('.')) url.pathname += '/';
+            var p = url.pathname;
+            return p.substring(0, p.lastIndexOf('/') + 1);
         })();
-
         var link = document.createElement('link');
         link.rel = 'stylesheet';
         link.href = APP_BASE + 'css/global.css';
         document.head.appendChild(link);
-
     </script>
 </head>
-<body>
-    <!-- Шапка сайта -->
-    <header class="main">
-        <a href="https://mauniver.ru/">
-            <img class="head" src="pic/logo.PNG" alt="Главная страница">
+<body class="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950">
+
+<!-- Floating decorative elements -->
+<div class="fixed top-20 left-10 w-72 h-72 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+<div class="fixed bottom-20 right-10 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl pointer-events-none"></div>
+<div class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-purple-600/5 rounded-full blur-3xl pointer-events-none"></div>
+
+<!-- ===== WELCOME PAGE ===== -->
+<div id="welcomePage" class="fixed inset-0 z-40 flex items-center justify-center px-4">
+    <div class="text-center max-w-lg">
+        <!-- Animated gradient rings -->
+        <div class="relative mb-8 inline-block">
+            <div class="absolute inset-0 rounded-full bg-gradient-to-r from-indigo-500 via-blue-500 to-purple-500 blur-2xl opacity-20 animate-pulse"></div>
+            <div class="relative w-24 h-24 mx-auto rounded-full bg-gradient-to-br from-indigo-500/20 via-blue-500/20 to-purple-500/20 border border-white/10 flex items-center justify-center">
+                <svg class="w-10 h-10 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                </svg>
+            </div>
+        </div>
+
+        <h1 class="text-5xl font-black tracking-tight leading-tight mb-4">
+            <span class="bg-gradient-to-r from-indigo-400 via-blue-400 to-purple-400 bg-clip-text text-transparent">
+                Проверка учебных планов
+            </span>
+        </h1>
+        <p class="text-slate-400 text-lg mb-10 leading-relaxed">
+            Автоматическая сверка учебных планов<br>с официальным сайтом МАУ
+        </p>
+
+        <button id="goToWorkBtn"
+            class="px-10 py-4 rounded-2xl bg-gradient-to-r from-indigo-600 via-blue-600 to-purple-600 text-white font-bold text-lg
+            shadow-xl shadow-indigo-500/30 hover:shadow-2xl hover:shadow-indigo-500/40 hover:brightness-110
+            transition-all active:scale-[0.97] tracking-tight">
+            Перейти к проверке
+        </button>
+
+        <p class="mt-8 text-xs text-slate-600">
+            Мурманский арктический университет
+        </p>
+    </div>
+</div>
+
+<!-- ===== WORKER INTERFACE ===== -->
+<div id="workerPage" class="hidden">
+
+    <!-- Header -->
+    <header class="fixed top-0 inset-x-0 z-30 h-14 bg-slate-950/80 backdrop-blur-xl border-b border-white/5 flex items-center px-4 lg:px-8">
+        <a href="https://mauniver.ru/" class="flex items-center gap-3 hover:opacity-80 transition-opacity shrink-0">
+            <img src="pic/logo.PNG" alt="МАУ" class="h-9">
         </a>
-        <div class="right"></div>
+        <div class="flex-1"></div>
+        <button id="backToWelcome" class="text-xs text-slate-500 hover:text-slate-300 transition-colors flex items-center gap-1">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+            На главную
+        </button>
     </header>
 
-    <!-- Основной контент -->
-    <div class="content">
-        <header>
-            <h1>Проверка учебных планов</h1>
-            <p>Выберите режим работы</p>
-        </header>
+    <main class="relative pt-20 pb-12 px-4">
+    <div class="mx-auto max-w-2xl relative">
 
-        <!-- Переключатель режимов -->
-        <div class="mode-selector">
-            <div class="mode-option">
-                <input type="radio" name="mode" id="modeCompare" value="compare" checked>
-                <label for="modeCompare">📄 Сравнение с сайтом</label>
-            </div>
-            <div class="mode-option">
-                <input type="radio" name="mode" id="modeFiles" value="files">
-                <label for="modeFiles">📁 Проверка файлов</label>
+        <!-- Floating sidebar with selected files + submit -->
+        <div id="filePanel" class="hidden fixed right-4 top-24 w-72 z-20">
+            <div class="bg-slate-800/90 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl shadow-black/40 overflow-hidden">
+                <div class="px-4 py-3 border-b border-white/5 flex items-center justify-between">
+                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Готово к проверке</span>
+                    <span id="filePanelCount" class="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-medium">0</span>
+                </div>
+                <div id="filePanelList" class="max-h-64 overflow-y-auto divide-y divide-white/5 px-2 text-xs"></div>
+                <div class="p-3 border-t border-white/5">
+                    <button id="filePanelSubmitBtn"
+                        class="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 via-blue-600 to-purple-600 text-white font-bold text-sm
+                        shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/30 hover:brightness-110
+                        transition-all active:scale-[0.98] tracking-tight">
+                        Проверить
+                    </button>
+                </div>
             </div>
         </div>
 
-        <!-- Режим 1: Сравнение с сайтом -->
-        <div id="compareMode" class="mode-content active">
-            <div class="conteiner">
-                <p>Ссылка на страницу с учебным планом</p>
-                <div class="input-group">
-                    <input type="text" id="urlInput" placeholder="https://mauniver.ru/sveden/education/op/..." autocomplete="off">
-                    <button class="clearUrlBtn" id="clearUrlBtn">Очистить</button>
+        <!-- Mode selector -->
+        <div class="flex gap-1 p-1.5 bg-slate-800/60 backdrop-blur rounded-xl mb-6 border border-white/5">
+            <label for="modeCompare" class="flex-1 cursor-pointer group">
+                <input type="radio" name="mode" id="modeCompare" value="compare" checked class="peer sr-only">
+                <span class="block text-center py-2.5 px-2 rounded-lg text-xs sm:text-sm font-medium transition-all
+                    peer-checked:bg-gradient-to-r peer-checked:from-indigo-600 peer-checked:to-blue-600 peer-checked:text-white peer-checked:shadow-lg peer-checked:shadow-indigo-500/25
+                    text-slate-400 group-hover:text-slate-200">
+                    По ссылке
+                </span>
+            </label>
+            <label for="modeFiles" class="flex-1 cursor-pointer group">
+                <input type="radio" name="mode" id="modeFiles" value="files" class="peer sr-only">
+                <span class="block text-center py-2.5 px-2 rounded-lg text-xs sm:text-sm font-medium transition-all
+                    peer-checked:bg-gradient-to-r peer-checked:from-indigo-600 peer-checked:to-blue-600 peer-checked:text-white peer-checked:shadow-lg peer-checked:shadow-indigo-500/25
+                    text-slate-400 group-hover:text-slate-200">
+                    Из файлов
+                </span>
+            </label>
+            <label for="modeSmb" class="flex-1 cursor-pointer group">
+                <input type="radio" name="mode" id="modeSmb" value="smb" class="peer sr-only">
+                <span class="block text-center py-2.5 px-2 rounded-lg text-xs sm:text-sm font-medium transition-all
+                    peer-checked:bg-gradient-to-r peer-checked:from-indigo-600 peer-checked:to-blue-600 peer-checked:text-white peer-checked:shadow-lg peer-checked:shadow-indigo-500/25
+                    text-slate-400 group-hover:text-slate-200">
+                    С сервера
+                </span>
+            </label>
+            <label for="modeDev" class="flex-1 cursor-pointer group">
+                <input type="radio" name="mode" id="modeDev" value="dev" class="peer sr-only">
+                <span class="block text-center py-2.5 px-2 rounded-lg text-xs sm:text-sm font-medium transition-all
+                    peer-checked:bg-gradient-to-r peer-checked:from-indigo-600 peer-checked:to-blue-600 peer-checked:text-white peer-checked:shadow-lg peer-checked:shadow-indigo-500/25
+                    text-slate-400 group-hover:text-slate-200">
+                    Служебное
+                </span>
+            </label>
+        </div>
+
+        <!-- === MODE 1: Compare === -->
+        <div id="compareMode" class="mode-content">
+            <div class="bg-slate-800/50 backdrop-blur-sm border border-white/5 rounded-2xl p-6 mb-4">
+                <label class="block text-sm font-medium text-slate-300 mb-2">Ссылка на страницу учебного плана</label>
+                <div class="flex gap-2">
+                    <input type="text" id="urlInput" placeholder="https://mauniver.ru/sveden/education/op/..." autocomplete="off"
+                        class="flex-1 bg-slate-900/60 border border-white/10 rounded-xl px-4 py-3 text-slate-200 placeholder-slate-500
+                        focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/30 transition-all text-sm">
+                    <button id="clearUrlBtn" class="px-4 rounded-xl bg-slate-700/50 text-slate-400 hover:text-white hover:bg-slate-600/50 transition-all text-sm font-medium">Очистить</button>
                 </div>
             </div>
-            <div class="conteiner">
-                <p>XML или PLX файл с учебным планом <span class="badge">один файл</span></p>
-                <!-- Область загрузки для режима сравнения -->
-                <div class="file-upload-area" id="compareUploadArea">
-                    <div class="upload-icon">📄</div>
-                    <div class="upload-text">Нажмите для выбора файла</div>
-                    <div class="upload-hint">или перетащите файл сюда</div>
-                    <div class="upload-hint">Поддерживаются только .xml и .plx</div>
+
+            <div class="bg-slate-800/50 backdrop-blur-sm border border-white/5 rounded-2xl p-6">
+                <div class="flex items-center gap-2 mb-3">
+                    <span class="text-sm font-medium text-slate-300">Файл учебного плана</span>
+                    <span class="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-medium uppercase tracking-wider">XML или PLX</span>
+                </div>
+                <div id="compareUploadArea"
+                    class="border-2 border-dashed border-slate-600/50 rounded-xl p-8 text-center cursor-pointer
+                    transition-all hover:border-indigo-500/50 hover:bg-indigo-500/5 group">
+                    <div class="text-3xl mb-2 group-hover:scale-110 transition-transform">📄</div>
+                    <div class="text-slate-300 font-medium text-sm">Нажмите, чтобы выбрать файл</div>
+                    <div class="text-slate-500 text-xs mt-1">или перетащите его сюда</div>
                 </div>
                 <input type="file" id="compareFileInput" accept=".xml,.plx" class="hidden-file-input">
-                
-                <!-- Контейнер для отображения выбранного файла -->
-                <div id="compareSelectedContainer" class="selected-files-container" style="display: none;">
-                    <div class="files-header">
-                        <span class="files-title">📋 Выбранный файл</span>
-                        <button type="button" class="clear-files-btn" id="clearCompareFileBtn">Очистить</button>
+                <div id="compareSelectedContainer" style="display:none;" class="mt-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">Выбранный файл</span>
+                        <button id="clearCompareFileBtn" class="text-xs text-rose-400 hover:text-rose-300 transition-colors">Удалить</button>
                     </div>
-                    <div class="files-list" id="compareFileInfo"></div>
+                    <div id="compareFileInfo"></div>
                 </div>
             </div>
         </div>
 
-        <!-- Режим 2: Проверка файлов (множественная загрузка) -->
-        <div id="filesMode" class="mode-content">
-            <div class="conteiner">
-                <p>Выберите файлы для проверки <span class="badge">можно несколько</span></p>
-                
-                <!-- Область для добавления файлов (без отдельной кнопки) -->
-                <div class="file-upload-area" id="fileUploadArea">
-                    <div class="upload-icon">📁</div>
-                    <div class="upload-text">Нажмите для выбора файлов</div>
-                    <div class="upload-hint">или перетащите файлы сюда</div>
-                    <div class="upload-hint">Поддерживаются только .xml и .plx</div>
+        <!-- === MODE 2: Batch Files === -->
+        <div id="filesMode" class="mode-content hidden">
+            <div class="bg-slate-800/50 backdrop-blur-sm border border-white/5 rounded-2xl p-6">
+                <div class="flex items-center gap-2 mb-3">
+                    <span class="text-sm font-medium text-slate-300">Файлы для проверки</span>
+                    <span class="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-medium uppercase tracking-wider">можно несколько</span>
                 </div>
-                
-                <!-- Скрытый input для выбора файлов -->
+                <div id="fileUploadArea"
+                    class="border-2 border-dashed border-slate-600/50 rounded-xl p-8 text-center cursor-pointer
+                    transition-all hover:border-indigo-500/50 hover:bg-indigo-500/5 group">
+                    <div class="text-3xl mb-2 group-hover:scale-110 transition-transform">📁</div>
+                    <div class="text-slate-300 font-medium text-sm">Нажмите, чтобы выбрать файлы</div>
+                    <div class="text-slate-500 text-xs mt-1">или перетащите их сюда</div>
+                </div>
                 <input type="file" id="multipleFileInput" accept=".xml,.plx" multiple class="hidden-file-input">
-                
-                <!-- Контейнер для списка выбранных файлов -->
-                <div id="selectedFilesContainer" class="selected-files-container" style="display: none;">
-                    <div class="files-header">
-                        <span class="files-title">📋 Выбранные файлы</span>
-                        <div style="display: flex; gap: 10px; align-items: center;">
-                            <span class="files-count" id="filesCount">0</span>
-                            <button type="button" class="clear-files-btn" id="clearFilesBtn">Очистить всё</button>
+                <div id="selectedFilesContainer" style="display:none;" class="mt-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-medium text-slate-400 uppercase tracking-wider">Выбранные файлы</span>
+                            <span id="filesCount" class="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-medium">0</span>
                         </div>
+                        <button id="clearFilesBtn" class="text-xs text-rose-400 hover:text-rose-300 transition-colors">Очистить всё</button>
                     </div>
-                    <div class="files-list" id="filesList"></div>
+                    <div id="filesList" class="divide-y divide-white/5 max-h-64 overflow-y-auto rounded-xl bg-slate-900/40 border border-white/5"></div>
                 </div>
             </div>
         </div>
 
-        <!-- Кнопки действий -->
-        <div class="conteiner submit-area">
-            <button class="btn submitBtn" id="submitBtn">Отправить</button>
-            <button class="btn clearBtn" id="clearAllBtn">Очистить всё</button>
+        <!-- === MODE 3: SMB === -->
+        <div id="smbMode" class="mode-content hidden">
+            <div class="bg-slate-800/50 backdrop-blur-sm border border-white/5 rounded-2xl p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <span class="text-sm font-medium text-slate-300">Выберите группы для проверки</span>
+                    <div class="flex gap-2">
+                        <button type="button" id="selectAllBtn" disabled
+                            class="text-xs px-3 py-1.5 rounded-lg bg-slate-700/50 text-slate-400 hover:text-white hover:bg-slate-600/50 transition-all disabled:opacity-30 disabled:cursor-not-allowed">
+                            Выбрать все
+                        </button>
+                        <button type="button" id="deselectAllBtn" disabled
+                            class="text-xs px-3 py-1.5 rounded-lg bg-slate-700/50 text-slate-400 hover:text-white hover:bg-slate-600/50 transition-all disabled:opacity-30 disabled:cursor-not-allowed">
+                            Снять все
+                        </button>
+                    </div>
+                </div>
+                <div id="hierarchyLoader" class="py-10 text-center text-slate-500 text-sm">Загрузка списка групп...</div>
+                <div id="hierarchyTree" style="display:none;"
+                    class="max-h-96 overflow-y-auto rounded-xl bg-slate-900/40 border border-white/5 p-3 text-sm"></div>
+                <div id="selectedCount" class="text-xs text-slate-500 mt-3"></div>
+                <div id="hierarchyError" style="display:none;" class="mt-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-sm"></div>
+            </div>
         </div>
 
-        <!-- Область вывода результата -->
-        <div class="outputArea">
-            <p>Результат или ошибки:</p>
-            <div id="outputContent">
-                <p>- здесь появится информация об отправленных данных -</p>
+        <!-- === MODE 4: Dev === -->
+        <div id="devMode" class="mode-content hidden">
+            <div class="bg-slate-800/50 backdrop-blur-sm border border-white/5 rounded-2xl p-6">
+                <span class="text-sm font-medium text-slate-300">Состояние кеша Redis</span>
+                <div id="devStatus" class="mt-3 p-4 rounded-xl bg-slate-900/40 border border-white/5 font-mono text-sm space-y-2">
+                    <div class="text-slate-500">Нажмите «Проверить состояние»</div>
+                </div>
+                <div class="flex gap-3 mt-4">
+                    <button id="devCheckBtn"
+                        class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 text-white text-sm font-medium
+                        hover:shadow-lg hover:shadow-indigo-500/25 transition-all active:scale-[0.98]">
+                        Проверить состояние
+                    </button>
+                    <button id="devRefreshBtn"
+                        class="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 text-white text-sm font-medium
+                        hover:shadow-lg hover:shadow-violet-500/25 transition-all active:scale-[0.98]">
+                        Обновить кеш
+                    </button>
+                </div>
+                <div id="devLoading" class="hidden mt-3 text-sm text-indigo-400 animate-pulse">Выполняется...</div>
             </div>
+        </div>
+
+    </div>
+    </main>
+</div>
+
+<!-- ===== MODAL OVERLAY ===== -->
+<div id="modalOverlay" class="fixed inset-0 z-50 flex items-center justify-center px-4 hidden">
+    <div class="absolute inset-0 bg-black/70 backdrop-blur-sm" id="modalBackdrop"></div>
+    <div id="modalCard" class="relative bg-slate-800/90 backdrop-blur-xl border border-white/10 rounded-3xl p-8 w-full max-w-md shadow-2xl shadow-black/50 text-center">
+        <!-- Spinner state -->
+        <div id="modalSpinner">
+            <div class="w-12 h-12 mx-auto mb-5 border-2 border-indigo-400/30 border-t-indigo-400 rounded-full animate-[spin_0.8s_linear_infinite]"></div>
+            <div id="modalProgressText" class="text-slate-300 text-sm font-medium">Подключение...</div>
+            <div class="mt-4 h-1.5 bg-slate-700/50 rounded-full overflow-hidden">
+                <div id="modalProgressFill" class="h-full rounded-full bg-gradient-to-r from-indigo-500 via-blue-500 to-purple-500 progress-fill indeterminate"></div>
+            </div>
+        </div>
+
+        <!-- Success state -->
+        <div id="modalSuccess" class="hidden">
+            <div class="w-14 h-14 mx-auto mb-5 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                <svg class="w-7 h-7 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                </svg>
+            </div>
+            <div id="modalSuccessText" class="text-slate-200 text-sm font-medium mb-1">Готово</div>
+            <div id="modalSuccessSub" class="text-slate-500 text-xs"></div>
+        </div>
+
+        <!-- Error state -->
+        <div id="modalError" class="hidden">
+            <div class="w-14 h-14 mx-auto mb-5 rounded-full bg-rose-500/20 flex items-center justify-center">
+                <svg class="w-7 h-7 text-rose-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </div>
+            <div class="text-slate-200 text-sm font-medium mb-1">Ошибка</div>
+            <div id="modalErrorText" class="text-slate-400 text-xs mb-5"></div>
+            <button id="modalErrorClose"
+                class="px-6 py-2.5 rounded-xl bg-slate-700/50 text-slate-300 text-sm font-medium
+                hover:bg-slate-600/50 transition-all">
+                Понятно
+            </button>
         </div>
     </div>
+</div>
 
-    <script>
-        // ========== ПОЛУЧЕНИЕ ЭЛЕМЕНТОВ DOM ==========
-        // Элементы переключения режимов
-        const modeCompare = document.getElementById('modeCompare');
-        const modeFiles = document.getElementById('modeFiles');
-        const compareModeDiv = document.getElementById('compareMode');
-        const filesModeDiv = document.getElementById('filesMode');
-        
-        // Элементы режима сравнения
-        const urlInput = document.getElementById('urlInput');
-        const clearUrlBtn = document.getElementById('clearUrlBtn');
-        const compareFileInput = document.getElementById('compareFileInput');
-        const compareUploadArea = document.getElementById('compareUploadArea');
-        const compareSelectedContainer = document.getElementById('compareSelectedContainer');
-        const compareFileInfo = document.getElementById('compareFileInfo');
-        const clearCompareFileBtn = document.getElementById('clearCompareFileBtn');
-        
-        // Элементы режима множественной загрузки
-        const multipleFileInput = document.getElementById('multipleFileInput');
-        const fileUploadArea = document.getElementById('fileUploadArea');
-        const selectedFilesContainer = document.getElementById('selectedFilesContainer');
-        const filesList = document.getElementById('filesList');
-        const filesCountSpan = document.getElementById('filesCount');
-        const clearFilesBtn = document.getElementById('clearFilesBtn');
-        
-        // Общие элементы
-        const submitBtn = document.getElementById('submitBtn');
-        const clearAllBtn = document.getElementById('clearAllBtn');
-        const outputContent = document.getElementById('outputContent');
+<!-- Tailwind class reference (ensures purge doesn't remove) -->
+<div class="hidden">
+    <span class="
+        flex items-center justify-between px-4 py-2.5 hover:bg-slate-800/40 transition-colors
+        text-sm text-slate-200 text-slate-400 text-[11px] text-[10px] text-xs
+        text-emerald-400 text-rose-400 text-indigo-300 text-indigo-400 text-slate-500 text-white text-yellow-400
+        bg-slate-700/40 hover:bg-slate-600/40 bg-slate-900/40 bg-emerald-500/10 bg-rose-500/10 bg-indigo-500/20 bg-yellow-500/10
+        px-2 py-0.5 rounded-full font-medium uppercase tracking-wider
+        mt-1 mt-3 mt-4 mb-2 mb-3 mr-3 flex-1 gap-2 gap-1
+        border border-white/5 rounded-xl rounded-full rounded-lg
+        w-full text-left cursor-pointer hover:bg-slate-700/40 group-hover:scale-110
+        transition-all transition-transform transition-colors
+        flex items-center cursor-pointer rounded-lg hover:bg-slate-700/40 transition-colors
+        py-2 text-indigo-300 font-semibold py-1.5 text-slate-200 py-1 text-slate-400
+        ml-0 ml-4 ml-8 w-4 inline-block text-center flex-shrink-0
+        text-slate-500 text-xs text-[10px] select-none
+        font-medium font-semibold font-mono tracking-wider tracking-tight
+        shrink-0 line-through opacity-50
+        max-w-[200px] truncate break-all
+        animate-pulse hidden block
+        p-3 p-4 p-5 p-6 p-8 rounded-2xl rounded-xl rounded-lg rounded-full
+        divide-y divide-white/5 max-h-64 overflow-y-auto
+        bg-slate-800/50 backdrop-blur-sm
+        border-l-4 border-l-emerald-500 border-l-yellow-500
+        space-y-1 space-y-2 space-y-3
+        bg-yellow-500/15 text-yellow-300 border-yellow-500/30
+    "></span>
+</div>
 
-        // ========== СОСТОЯНИЕ ПРИЛОЖЕНИЯ ==========
-        let currentMode = 'compare';      // Текущий режим: 'compare' или 'files'
-        let compareFile = null;            // Файл для режима сравнения
-        let multipleFiles = [];             // Массив файлов для режима множественной загрузки
+<script>
+    // ========== PAGES ==========
+    var welcomePage = document.getElementById('welcomePage');
+    var workerPage = document.getElementById('workerPage');
+    var goToWorkBtn = document.getElementById('goToWorkBtn');
+    var backToWelcome = document.getElementById('backToWelcome');
 
-        // ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
-        
-        // Экранирование HTML символов
-        window.escapeHtml = function(text) {
-            if (!text) return '';
-            return String(text).replace(/[&<>]/g, function(m) {
-                if (m === '&') return '&amp;';
-                if (m === '<') return '&lt;';
-                if (m === '>') return '&gt;';
-                return m;
-            });
-        };
+    goToWorkBtn.addEventListener('click', function() {
+        welcomePage.classList.add('hidden');
+        workerPage.classList.remove('hidden');
+    });
+    backToWelcome.addEventListener('click', function() {
+        workerPage.classList.add('hidden');
+        welcomePage.classList.remove('hidden');
+    });
 
-        // Форматирование размера файла
-        function formatFileSize(bytes) {
-            if (bytes === 0) return '0 B';
-            const k = 1024;
-            const sizes = ['B', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    // ========== DOM ELEMENTS ==========
+    var modeCompare = document.getElementById('modeCompare');
+    var modeFiles = document.getElementById('modeFiles');
+    var modeSmb = document.getElementById('modeSmb');
+    var modeDev = document.getElementById('modeDev');
+    var compareModeDiv = document.getElementById('compareMode');
+    var filesModeDiv = document.getElementById('filesMode');
+    var smbModeDiv = document.getElementById('smbMode');
+    var devModeDiv = document.getElementById('devMode');
+
+    var urlInput = document.getElementById('urlInput');
+    var clearUrlBtn = document.getElementById('clearUrlBtn');
+    var compareFileInput = document.getElementById('compareFileInput');
+    var compareUploadArea = document.getElementById('compareUploadArea');
+    var compareSelectedContainer = document.getElementById('compareSelectedContainer');
+    var compareFileInfo = document.getElementById('compareFileInfo');
+    var clearCompareFileBtn = document.getElementById('clearCompareFileBtn');
+
+    var multipleFileInput = document.getElementById('multipleFileInput');
+    var fileUploadArea = document.getElementById('fileUploadArea');
+    var selectedFilesContainer = document.getElementById('selectedFilesContainer');
+    var filesList = document.getElementById('filesList');
+    var filesCountSpan = document.getElementById('filesCount');
+    var clearFilesBtn = document.getElementById('clearFilesBtn');
+
+    var hierarchyLoader = document.getElementById('hierarchyLoader');
+    var hierarchyTree = document.getElementById('hierarchyTree');
+    var hierarchyError = document.getElementById('hierarchyError');
+    var selectAllBtn = document.getElementById('selectAllBtn');
+    var deselectAllBtn = document.getElementById('deselectAllBtn');
+    var selectedCount = document.getElementById('selectedCount');
+
+    // Panel
+    var filePanel = document.getElementById('filePanel');
+    var filePanelList = document.getElementById('filePanelList');
+    var filePanelCount = document.getElementById('filePanelCount');
+    var filePanelSubmitBtn = document.getElementById('filePanelSubmitBtn');
+
+    // Modal
+    var modalOverlay = document.getElementById('modalOverlay');
+    var modalBackdrop = document.getElementById('modalBackdrop');
+    var modalSpinner = document.getElementById('modalSpinner');
+    var modalSuccess = document.getElementById('modalSuccess');
+    var modalError = document.getElementById('modalError');
+    var modalProgressText = document.getElementById('modalProgressText');
+    var modalProgressFill = document.getElementById('modalProgressFill');
+    var modalSuccessText = document.getElementById('modalSuccessText');
+    var modalSuccessSub = document.getElementById('modalSuccessSub');
+    var modalErrorText = document.getElementById('modalErrorText');
+    var modalErrorClose = document.getElementById('modalErrorClose');
+
+    // ========== STATE ==========
+    var currentMode = 'compare';
+    var compareFile = null;
+    var multipleFiles = [];
+    var hierarchyData = null;
+    var progressTimer = null;
+
+    // ========== UTILS ==========
+    function esc(s) { return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    window.escapeHtml = function(t) { return t ? String(t).replace(/[&<>]/g,function(m){return m==='&'?'&amp;':m==='<'?'&lt;':'&gt;';}) : ''; };
+    function formatFileSize(b) { if(!b)return'0 B';var k=1024,s=['B','KB','MB','GB'],i=Math.floor(Math.log(b)/Math.log(k));return parseFloat((b/Math.pow(k,i)).toFixed(2))+' '+s[i]; }
+    function getFileIcon(n) { var e=n.split('.').pop().toLowerCase(); return e==='xml'?'📄':e==='plx'?'📋':'📎'; }
+    function isValidExt(n) { var e=n.split('.').pop().toLowerCase(); return e==='xml'||e==='plx'; }
+
+    // ========== MODAL ==========
+    function showModal() {
+        modalOverlay.classList.remove('hidden');
+        modalSpinner.classList.remove('hidden');
+        modalSuccess.classList.add('hidden');
+        modalError.classList.add('hidden');
+    }
+    function hideModal() {
+        modalOverlay.classList.add('hidden');
+        if (progressTimer) { clearInterval(progressTimer); progressTimer = null; }
+    }
+    function showModalProgress(stages) {
+        if (!stages || !stages.length) stages = ['Подключение...','Обработка данных...','Сравнение...','Формирование отчёта...'];
+        var step = 0;
+        showModal();
+        modalProgressFill.className = 'h-full rounded-full bg-gradient-to-r from-indigo-500 via-blue-500 to-purple-500 progress-fill indeterminate';
+        modalProgressText.textContent = stages[0];
+        progressTimer = setInterval(function() { step = (step + 1) % stages.length; modalProgressText.textContent = stages[step]; }, 3500);
+    }
+    function showModalSuccess(title, sub) {
+        if (progressTimer) { clearInterval(progressTimer); progressTimer = null; }
+        modalSpinner.classList.add('hidden');
+        modalError.classList.add('hidden');
+        modalSuccess.classList.remove('hidden');
+        modalProgressFill.className = 'h-full rounded-full bg-gradient-to-r from-emerald-500 to-green-500 progress-fill determinate';
+        modalSuccessText.textContent = title || 'Готово';
+        modalSuccessSub.textContent = sub || '';
+    }
+    function showModalError(msg) {
+        if (progressTimer) { clearInterval(progressTimer); progressTimer = null; }
+        modalSpinner.classList.add('hidden');
+        modalSuccess.classList.add('hidden');
+        modalError.classList.remove('hidden');
+        modalErrorText.textContent = msg;
+    }
+
+    modalErrorClose.addEventListener('click', hideModal);
+    modalBackdrop.addEventListener('click', function() {
+        if (!modalError.classList.contains('hidden')) hideModal();
+    });
+
+    // ========== COMPARE MODE ==========
+    function updateCompareFileDisplay() {
+        if (compareFile) {
+            compareSelectedContainer.style.display = 'block';
+            compareFileInfo.innerHTML = '<div class="flex items-center gap-3 px-4 py-3 bg-slate-900/40 border border-white/5 rounded-xl">' +
+                '<span class="text-lg">' + getFileIcon(compareFile.name) + '</span>' +
+                '<span class="flex-1 text-sm text-slate-200 truncate">' + esc(compareFile.name) + '</span>' +
+                '<span class="text-xs text-slate-500 shrink-0">' + formatFileSize(compareFile.size) + '</span></div>';
+        } else {
+            compareSelectedContainer.style.display = 'none';
+            compareFileInfo.innerHTML = '';
         }
+        syncPanel();
+    }
+    function handleCompareFileSelect(file) {
+        if (!file) { compareFile = null; updateCompareFileDisplay(); return false; }
+        if (!isValidExt(file.name)) { showModalError('Неверный формат файла: ' + esc(file.name) + '. Поддерживаются .xml и .plx'); return false; }
+        if (file.size > 10*1024*1024) { showModalError('Файл «' + esc(file.name) + '» превышает 10 МБ'); return false; }
+        compareFile = file; updateCompareFileDisplay();
+        return true;
+    }
+    function clearCompareFile() { compareFile = null; compareFileInput.value = ''; updateCompareFileDisplay(); }
 
-        // Получение иконки по расширению
-        function getFileIcon(filename) {
-            const ext = filename.split('.').pop().toLowerCase();
-            if (ext === 'xml') return '📄';
-            if (ext === 'plx') return '📋';
-            return '📎';
-        }
+    // ========== MULTI FILE MODE ==========
+    function updateFilesList() {
+        var c = multipleFiles.length;
+        filesCountSpan.textContent = c;
+        if (c === 0) { selectedFilesContainer.style.display = 'none'; multipleFileInput.value = ''; return; }
+        selectedFilesContainer.style.display = 'block';
+        filesList.innerHTML = multipleFiles.map(function(f,i){return '<div class="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-800/40 transition-colors">' +
+            '<span class="text-lg">'+getFileIcon(f.name)+'</span>' +
+            '<span class="flex-1 text-sm text-slate-200 truncate">'+esc(f.name)+'</span>' +
+            '<span class="text-xs text-slate-500 shrink-0">'+formatFileSize(f.size)+'</span>' +
+            '<button onclick="removeFile('+i+')" class="text-slate-500 hover:text-rose-400 transition-colors ml-2 shrink-0">' +
+            '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>' +
+            '</div>';}).join('');
+    }
+    window.removeFile = function(i) { multipleFiles.splice(i,1); updateFilesList(); syncPanel(); };
+    function addFiles(newFiles) {
+        var valid=[], errs=[];
+        newFiles.forEach(function(f){
+            if(!isValidExt(f.name)){errs.push(esc(f.name)+': неподдерживаемый формат');return;}
+            if(f.size>50*1024*1024){errs.push(esc(f.name)+': превышает 50 МБ');return;}
+            if(multipleFiles.some(function(x){return x.name===f.name&&x.size===f.size;})){errs.push(esc(f.name)+': уже добавлен');return;}
+            valid.push(f);
+        });
+        if(valid.length){multipleFiles.push.apply(multipleFiles,valid);updateFilesList();syncPanel();}
+        if(errs.length) setTimeout(function(){showModalError(errs.join('<br>'));}, 100);
+    }
+    function clearAllFiles() { multipleFiles=[]; updateFilesList(); syncPanel(); }
 
-        // Проверка расширения файла
-        function isValidFileExtension(filename) {
-            const ext = filename.split('.').pop().toLowerCase();
-            return ext === 'xml' || ext === 'plx';
-        }
+    // ========== MODE SWITCH ==========
+    function switchMode() {
+        [compareModeDiv,filesModeDiv,smbModeDiv,devModeDiv].forEach(function(d){d.classList.add('hidden');});
+        if(modeCompare.checked){currentMode='compare';compareModeDiv.classList.remove('hidden');}
+        else if(modeFiles.checked){currentMode='files';filesModeDiv.classList.remove('hidden');}
+        else if(modeSmb.checked){currentMode='smb';smbModeDiv.classList.remove('hidden');loadHierarchy();}
+        else{currentMode='dev';devModeDiv.classList.remove('hidden');}
+        syncPanel();
+    }
 
-        // Очистка области вывода
-        function clearOutput() {
-            outputContent.innerHTML = `<p>- здесь появится информация об отправленных данных -</p>`;
-        }
-
-        // Показать сообщение об ошибке
-        function showError(message) {
-            outputContent.innerHTML = `<div class="error"><strong>Ошибка:</strong> ${message}</div>`;
-        }
-
-        // Показать сообщение об успехе
-        function showSuccess(message) {
-            outputContent.innerHTML = `<div class="success">${message}</div>`;
-        }
-
-        // Показать состояние загрузки
-        function showLoading(message = "⏳ Отправка данных на сервер...") {
-            outputContent.innerHTML = `<div class="loading">${message}</div>`;
-        }
-
-        // ========== ФУНКЦИИ ДЛЯ РЕЖИМА СРАВНЕНИЯ ==========
-        
-        // Обновление отображения выбранного файла в режиме сравнения
-        function updateCompareFileDisplay() {
+    // ========== PANEL SYNC ==========
+    function syncPanel() {
+        if (currentMode === 'compare') {
             if (compareFile) {
-                compareSelectedContainer.style.display = 'block';
-                compareFileInfo.innerHTML = `
-                    <div class="file-item">
-                        <div class="file-info">
-                            <span class="file-icon">${getFileIcon(compareFile.name)}</span>
-                            <span class="file-name">${escapeHtml(compareFile.name)}</span>
-                            <span class="file-size">(${formatFileSize(compareFile.size)})</span>
-                        </div>
-                    </div>
-                `;
+                filePanel.classList.remove('hidden');
+                filePanelCount.textContent = '1';
+                filePanelList.innerHTML = '<div class="flex items-center gap-2 px-2 py-2 text-slate-400">' +
+                    '<span>' + getFileIcon(compareFile.name) + '</span>' +
+                    '<span class="truncate text-slate-200">' + esc(compareFile.name) + '</span>' +
+                    '</div>';
             } else {
-                compareSelectedContainer.style.display = 'none';
-                compareFileInfo.innerHTML = '';
+                filePanel.classList.add('hidden');
             }
-        }
-
-        // Обработка выбора файла в режиме сравнения
-        function handleCompareFileSelect(file) {
-            if (!file) {
-                compareFile = null;
-                updateCompareFileDisplay();
-                return false;
-            }
-            
-            // Проверка расширения
-            if (!isValidFileExtension(file.name)) {
-                showError(`Неверный формат файла: ${file.name}. Поддерживаются только .xml и .plx`);
-                return false;
-            }
-            
-            // Проверка размера (макс 10 МБ)
-            if (file.size > 10 * 1024 * 1024) {
-                showError(`Файл ${file.name} превышает 10 МБ`);
-                return false;
-            }
-            
-            compareFile = file;
-            updateCompareFileDisplay();
-            showSuccess(`Выбран файл: ${compareFile.name}`);
-            setTimeout(clearOutput, 2000);
-            return true;
-        }
-
-        // Очистка файла в режиме сравнения
-        function clearCompareFile() {
-            compareFile = null;
-            compareFileInput.value = '';
-            updateCompareFileDisplay();
-            showSuccess('Файл удалён');
-            setTimeout(clearOutput, 1500);
-        }
-
-        // ========== ФУНКЦИИ ДЛЯ РЕЖИМА МНОЖЕСТВЕННОЙ ЗАГРУЗКИ ==========
-        
-        // Обновление отображения списка файлов
-        function updateFilesList() {
-            const count = multipleFiles.length;
-            filesCountSpan.textContent = count;
-            
-            if (count === 0) {
-                selectedFilesContainer.style.display = 'none';
-                multipleFileInput.value = '';
-                return;
-            }
-            
-            selectedFilesContainer.style.display = 'block';
-            filesList.innerHTML = multipleFiles.map((file, index) => `
-                <div class="file-item" data-index="${index}">
-                    <div class="file-info">
-                        <span class="file-icon">${getFileIcon(file.name)}</span>
-                        <span class="file-name">${escapeHtml(file.name)}</span>
-                        <span class="file-size">(${formatFileSize(file.size)})</span>
-                    </div>
-                    <div class="file-actions">
-                        <button class="remove-file-btn" onclick="removeFile(${index})" title="Удалить">🗑️</button>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        // Удаление файла по индексу (глобальная функция для onclick)
-        window.removeFile = function(index) {
-            multipleFiles.splice(index, 1);
-            updateFilesList();
-            showSuccess(`Файл удалён. Осталось файлов: ${multipleFiles.length}`);
-            setTimeout(clearOutput, 2000);
-        };
-
-        // Добавление новых файлов с проверкой
-        function addFiles(newFiles) {
-            const maxSize = 50 * 1024 * 1024; // 50 МБ
-            const validFiles = [];
-            const errors = [];
-            
-            for (const file of newFiles) {
-                // Проверка расширения
-                if (!isValidFileExtension(file.name)) {
-                    errors.push(`${file.name}: неподдерживаемый формат (нужен .xml или .plx)`);
-                    continue;
-                }
-                
-                // Проверка размера
-                if (file.size > maxSize) {
-                    errors.push(`${file.name}: превышает 50 МБ`);
-                    continue;
-                }
-                
-                // Проверка на дубликаты
-                const isDuplicate = multipleFiles.some(f => f.name === file.name && f.size === file.size);
-                if (isDuplicate) {
-                    errors.push(`${file.name}: файл уже добавлен`);
-                    continue;
-                }
-                
-                validFiles.push(file);
-            }
-            
-            if (validFiles.length > 0) {
-                multipleFiles.push(...validFiles);
-                updateFilesList();
-                showSuccess(`Добавлено файлов: ${validFiles.length}`);
-            }
-            
-            if (errors.length > 0) {
-                showError(errors.join('<br>'));
-            } else {
-                setTimeout(clearOutput, 2000);
-            }
-        }
-
-        // Очистка всех файлов
-        function clearAllFiles() {
+        } else if (currentMode === 'files') {
             if (multipleFiles.length > 0) {
-                multipleFiles = [];
-                updateFilesList();
-                showSuccess('Все файлы удалены');
-                setTimeout(clearOutput, 1500);
-            }
-        }
-
-        // ========== ОБРАБОТЧИКИ СОБЫТИЙ ==========
-        
-        // Переключение режимов
-        function switchMode() {
-            if (modeCompare.checked) {
-                currentMode = 'compare';
-                compareModeDiv.classList.add('active');
-                filesModeDiv.classList.remove('active');
+                filePanel.classList.remove('hidden');
+                filePanelCount.textContent = multipleFiles.length;
+                filePanelList.innerHTML = multipleFiles.map(function(f) {
+                    return '<div class="flex items-center gap-2 px-2 py-2 text-slate-400">' +
+                        '<span>' + getFileIcon(f.name) + '</span>' +
+                        '<span class="truncate text-slate-200">' + esc(f.name) + '</span>' +
+                        '</div>';
+                }).join('');
             } else {
-                currentMode = 'files';
-                compareModeDiv.classList.remove('active');
-                filesModeDiv.classList.add('active');
+                filePanel.classList.add('hidden');
             }
-            clearOutput();
-        }
-
-        // Обработчики для режима сравнения
-        compareUploadArea.addEventListener('click', () => compareFileInput.click());
-        
-        compareFileInput.addEventListener('change', (event) => {
-            if (event.target.files.length > 0) {
-                handleCompareFileSelect(event.target.files[0]);
-            }
-        });
-        
-        clearCompareFileBtn.addEventListener('click', clearCompareFile);
-        clearUrlBtn.addEventListener('click', () => { urlInput.value = ''; });
-        
-        // Drag & Drop для режима сравнения
-        compareUploadArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            compareUploadArea.classList.add('drag-over');
-        });
-        
-        compareUploadArea.addEventListener('dragleave', (e) => {
-            e.preventDefault();
-            compareUploadArea.classList.remove('drag-over');
-        });
-        
-        compareUploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            compareUploadArea.classList.remove('drag-over');
-            const droppedFiles = Array.from(e.dataTransfer.files);
-            if (droppedFiles.length > 0) {
-                // Для режима сравнения берем только первый файл
-                handleCompareFileSelect(droppedFiles[0]);
-            }
-        });
-
-        // Обработчики для режима множественной загрузки (без отдельной кнопки)
-        fileUploadArea.addEventListener('click', () => multipleFileInput.click());
-        
-        multipleFileInput.addEventListener('change', (event) => {
-            if (event.target.files.length > 0) {
-                addFiles(Array.from(event.target.files));
-                multipleFileInput.value = '';
-            }
-        });
-        
-        clearFilesBtn.addEventListener('click', clearAllFiles);
-        
-        // Drag & Drop для множественной загрузки
-        fileUploadArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            fileUploadArea.classList.add('drag-over');
-        });
-        
-        fileUploadArea.addEventListener('dragleave', (e) => {
-            e.preventDefault();
-            fileUploadArea.classList.remove('drag-over');
-        });
-        
-        fileUploadArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            fileUploadArea.classList.remove('drag-over');
-            const droppedFiles = Array.from(e.dataTransfer.files);
-            if (droppedFiles.length > 0) {
-                addFiles(droppedFiles);
-            }
-        });
-
-        // Очистка всех полей
-        clearAllBtn.addEventListener('click', () => {
-            urlInput.value = '';
-            clearCompareFile();
-            clearAllFiles();
-            clearOutput();
-            showSuccess('Все поля очищены');
-            setTimeout(clearOutput, 1500);
-        });
-
-        // Переключение режимов
-        modeCompare.addEventListener('change', switchMode);
-        modeFiles.addEventListener('change', switchMode);
-
-        // ========== ОТПРАВКА ДАННЫХ НА СЕРВЕР ==========
-        submitBtn.addEventListener('click', async function() {
-            if (currentMode === 'compare') {
-                // Режим сравнения с сайтом
-                const url = urlInput.value.trim();
-                
-                if (!url) {
-                    showError('Укажите URL адрес');
-                    return;
-                }
-                
-                if (!compareFile) {
-                    showError('Выберите файл (.xml или .plx)');
-                    return;
-                }
-                
-                showLoading('⏳ Отправка данных на сервер для сравнения...');
-                
-                try {
-                    const formData = new FormData();
-                    formData.append('file', compareFile);
-                    const encodedUrl = encodeURIComponent(url);
-                    const apiUrl = `${APP_BASE}api/compare/json?url=${encodedUrl}`;
-                    
-                    const response = await fetch(apiUrl, {
-                        method: 'POST',
-                        body: formData,
-                        headers: { 'Accept': 'application/json' }
-                    });
-                    
-                    if (!response.ok) {
-                        let errorMessage = `Ошибка ${response.status}`;
-                        try {
-                            const errorData = await response.json();
-                            errorMessage = errorData.detail || errorData.message || errorMessage;
-                        } catch (e) {
-                            errorMessage = await response.text();
-                        }
-                        throw new Error(errorMessage.substring(0, 200));
-                    }
-                    
-                    const result = await response.json();
-                    localStorage.setItem('compareResult', JSON.stringify(result));
-                    showSuccess('Анализ выполнен успешно! Перенаправление...');
-                    
-                    setTimeout(() => {
-                        window.location.href = APP_BASE + 'report_detail.html';
-                    }, 500);
-                    
-                } catch (error) {
-                    showError(error.message);
-                    console.error('Ошибка:', error);
-                }
-                
+        } else if (currentMode === 'smb') {
+            var c = getCheckedPrograms().length;
+            if (c > 0) {
+                filePanel.classList.remove('hidden');
+                filePanelCount.textContent = c;
+                filePanelList.innerHTML = '<div class="px-2 py-2 text-slate-400 text-xs">Выбрано групп: <span class="text-slate-200 font-medium">' + c + '</span></div>';
             } else {
-                // Режим проверки файлов (множественная загрузка)
-                if (multipleFiles.length === 0) {
-                    showError('Выберите хотя бы один файл');
-                    return;
-                }
-                
-                showLoading(`⏳ Отправка ${multipleFiles.length} файлов на сервер...`);
-                
-                try {
-                    const formData = new FormData();
-                    multipleFiles.forEach(file => {
-                        formData.append('files', file);
-                    });
-                    
-                    const endpoint = `${APP_BASE}api/compare/files/json`
-                    const response = await fetch(endpoint, {
-                        method: 'POST',
-                        body: formData
-                    });
-                    
-                    if (!response.ok) {
-                        let errorMessage = `Ошибка ${response.status}`;
-                        try {
-                            const errorData = await response.json();
-                            errorMessage = errorData.detail || errorData.message || errorMessage;
-                        } catch (e) {
-                            errorMessage = await response.text();
-                        }
-                        throw new Error(errorMessage.substring(0, 200));
-                    }
-                    
-                    const results = await response.json();
-                    localStorage.setItem('compareResults', JSON.stringify(results));
-                    showSuccess('Анализ файлов выполнен успешно! Перенаправление...');
-
-                    setTimeout(() => {
-                        window.location.href = APP_BASE + 'report_list.html';
-                    }, 500);
-                    
-                } catch (error) {
-                    showError(error.message);
-                    console.error('Ошибка:', error);
-                }
+                filePanel.classList.add('hidden');
             }
+        } else {
+            filePanel.classList.add('hidden');
+        }
+    }
+
+    // ========== EVENT LISTENERS ==========
+    compareUploadArea.addEventListener('click',function(){compareFileInput.click();});
+    compareFileInput.addEventListener('change',function(e){if(e.target.files.length)handleCompareFileSelect(e.target.files[0]);});
+    clearCompareFileBtn.addEventListener('click',clearCompareFile);
+    clearUrlBtn.addEventListener('click',function(){urlInput.value='';});
+
+    ['dragenter','dragover'].forEach(function(ev){compareUploadArea.addEventListener(ev,function(e){e.preventDefault();e.stopPropagation();compareUploadArea.classList.add('border-indigo-400/70','bg-indigo-500/10');});});
+    compareUploadArea.addEventListener('dragleave',function(e){e.preventDefault();compareUploadArea.classList.remove('border-indigo-400/70','bg-indigo-500/10');});
+    compareUploadArea.addEventListener('drop',function(e){e.preventDefault();compareUploadArea.classList.remove('border-indigo-400/70','bg-indigo-500/10');var fs=Array.from(e.dataTransfer.files);if(fs.length)handleCompareFileSelect(fs[0]);});
+
+    fileUploadArea.addEventListener('click',function(){multipleFileInput.click();});
+    multipleFileInput.addEventListener('change',function(e){if(e.target.files.length){addFiles(Array.from(e.target.files));multipleFileInput.value='';}});
+    clearFilesBtn.addEventListener('click',clearAllFiles);
+
+    ['dragenter','dragover'].forEach(function(ev){fileUploadArea.addEventListener(ev,function(e){e.preventDefault();e.stopPropagation();fileUploadArea.classList.add('border-indigo-400/70','bg-indigo-500/10');});});
+    fileUploadArea.addEventListener('dragleave',function(e){e.preventDefault();fileUploadArea.classList.remove('border-indigo-400/70','bg-indigo-500/10');});
+    fileUploadArea.addEventListener('drop',function(e){e.preventDefault();fileUploadArea.classList.remove('border-indigo-400/70','bg-indigo-500/10');var fs=Array.from(e.dataTransfer.files);if(fs.length)addFiles(fs);});
+
+    modeCompare.addEventListener('change',switchMode);
+    modeFiles.addEventListener('change',switchMode);
+    modeSmb.addEventListener('change',switchMode);
+    modeDev.addEventListener('change',switchMode);
+
+    // ========== HIERARCHY & TREE ==========
+    function loadHierarchy() {
+        if(hierarchyData){buildTree();return;}
+        hierarchyLoader.style.display='block';hierarchyTree.style.display='none';hierarchyError.style.display='none';
+        selectAllBtn.disabled=true;deselectAllBtn.disabled=true;
+        fetch(APP_BASE+'api/hierarchy')
+            .then(function(r){if(!r.ok)return r.json().then(function(e){throw new Error(e.detail||'Ошибка загрузки');});return r.json();})
+            .then(function(d){hierarchyData=d;hierarchyLoader.style.display='none';buildTree();})
+            .catch(function(e){hierarchyLoader.style.display='none';hierarchyError.style.display='block';hierarchyError.textContent=e.message;});
+    }
+
+    function buildTree() {
+        hierarchyTree.style.display='block';hierarchyTree.innerHTML='';
+        selectAllBtn.disabled=false;deselectAllBtn.disabled=false;
+        var insts=hierarchyData.institutes||{};
+        Object.keys(insts).sort().forEach(function(instName){
+            var instDiv=document.createElement('div');instDiv.className='';
+            var instHead=document.createElement('div');
+            instHead.className='flex items-center gap-2 py-2 text-indigo-300 font-semibold cursor-pointer select-none hover:bg-slate-800/40 rounded-lg px-2 transition-colors';
+            instHead.innerHTML='<span class="tree-toggle w-4 text-center flex-shrink-0 text-xs text-slate-500">▶</span>' +
+                '<label class="flex items-center gap-2 cursor-pointer flex-1"><input type="checkbox" class="tree-cb inst-cb w-4 h-4 rounded border-slate-600 bg-slate-800 text-indigo-500 focus:ring-indigo-500/50" data-type="inst" data-name="'+esc(instName)+'"> '+esc(instName)+'</label>';
+            instDiv.appendChild(instHead);
+            var instBody=document.createElement('div');instBody.className='tree-collapsed ml-4';
+            var depts=insts[instName]||{};
+            Object.keys(depts).sort().forEach(function(deptName){
+                var deptDiv=document.createElement('div');
+                var deptHead=document.createElement('div');
+                deptHead.className='flex items-center gap-2 py-1.5 text-slate-200 cursor-pointer select-none hover:bg-slate-800/40 rounded-lg px-2 transition-colors ml-4';
+                deptHead.innerHTML='<span class="tree-toggle w-4 text-center flex-shrink-0 text-xs text-slate-500">▶</span>' +
+                    '<label class="flex items-center gap-2 cursor-pointer flex-1"><input type="checkbox" class="tree-cb dept-cb w-4 h-4 rounded border-slate-600 bg-slate-800 text-indigo-500 focus:ring-indigo-500/50" data-type="dept" data-inst="'+esc(instName)+'" data-name="'+esc(deptName)+'"> '+esc(deptName)+'</label>';
+                deptDiv.appendChild(deptHead);
+                var deptBody=document.createElement('div');deptBody.className='tree-collapsed ml-4';
+                var progs=depts[deptName]||[];
+                progs.forEach(function(p){
+                    var row=document.createElement('div');
+                    row.className='flex items-center gap-2 py-1 text-slate-400 hover:bg-slate-800/40 rounded-lg px-2 transition-colors ml-8';
+                    row.innerHTML='<label class="flex items-center gap-2 cursor-pointer flex-1"><input type="checkbox" class="tree-cb prog-cb w-4 h-4 rounded border-slate-600 bg-slate-800 text-indigo-500 focus:ring-indigo-500/50" data-type="prog" data-inst="'+esc(instName)+'" data-dept="'+esc(deptName)+'" data-name="'+esc(p.program_name)+'"> '+esc(p.program_name)+' <span class="text-[10px] font-mono text-slate-500">'+esc(p.code)+'</span></label>';
+                    deptBody.appendChild(row);
+                });
+                deptDiv.appendChild(deptBody);instBody.appendChild(deptDiv);
+            });
+            instDiv.appendChild(instBody);hierarchyTree.appendChild(instDiv);
         });
-    </script>
+        attachTreeEvents();updateSmbCount();
+    }
+
+    function attachTreeEvents() {
+        hierarchyTree.querySelectorAll('.tree-toggle').forEach(function(t){
+            t.addEventListener('click',function(e){e.stopPropagation();
+                var ch=this.parentElement.nextElementSibling;
+                if(!ch)return;
+                var collapsed=ch.classList.toggle('tree-collapsed');
+                this.textContent=collapsed?'▶':'▼';});
+        });
+        hierarchyTree.querySelectorAll('.tree-toggle').forEach(function(t){
+            var row = t.parentElement;
+            if (!row) return;
+            row.addEventListener('click', function(e) {
+                if (e.target.tagName === 'INPUT' || e.target.closest('label')) return;
+                var toggle = this.querySelector('.tree-toggle');
+                if (toggle) toggle.click();
+            });
+        });
+        hierarchyTree.querySelectorAll('.inst-cb').forEach(function(cb){cb.addEventListener('change',function(){var n=this.closest('.flex.items-center').parentElement;n.querySelectorAll('.tree-cb').forEach(function(c){c.checked=cb.checked;c.indeterminate=false;});updateSmbCount();});});
+        hierarchyTree.querySelectorAll('.dept-cb').forEach(function(cb){cb.addEventListener('change',function(){var n=this.closest('.flex.items-center').parentElement;n.querySelectorAll('.prog-cb').forEach(function(c){c.checked=cb.checked;});updateParentInst(this);updateSmbCount();});});
+        hierarchyTree.querySelectorAll('.prog-cb').forEach(function(cb){cb.addEventListener('change',function(){updateParentDept(this);updateSmbCount();});});
+    }
+    function updateParentDept(cb){var n=cb.closest('.flex.items-center').parentElement,p=n.querySelectorAll('.prog-cb'),all=true,none=true;p.forEach(function(c){if(c.checked)none=false;else all=false;});var dc=n.querySelector('.dept-cb');dc.checked=all;dc.indeterminate=!all&&!none;updateParentInst(dc);}
+    function updateParentInst(cb){var inst=cb.closest('.flex.items-center').parentElement.parentElement.parentElement;var dcs=inst.querySelectorAll('.dept-cb');var all=true,none=true;dcs.forEach(function(c){if(c.checked)none=false;else all=false;if(c.indeterminate){all=false;none=false;}});var ic=inst.querySelector('.inst-cb');ic.checked=all;ic.indeterminate=!all&&!none;}
+    function getCheckedPrograms(){var n=[];hierarchyTree.querySelectorAll('.prog-cb:checked').forEach(function(c){n.push(c.dataset.name);});return n;}
+    function updateSmbCount(){if(!hierarchyTree||hierarchyTree.style.display==='none')return;var c=hierarchyTree.querySelectorAll('.prog-cb:checked').length;selectedCount.textContent=c>0?'Выбрано групп: '+c:'Ничего не выбрано';syncPanel();}
+    selectAllBtn.addEventListener('click',function(){hierarchyTree.querySelectorAll('.tree-cb').forEach(function(c){c.checked=true;c.indeterminate=false;});updateSmbCount();});
+    deselectAllBtn.addEventListener('click',function(){hierarchyTree.querySelectorAll('.tree-cb').forEach(function(c){c.checked=false;c.indeterminate=false;});updateSmbCount();});
+
+    // ========== SUBMIT ==========
+    async function doSubmit() {
+        if(currentMode==='compare'){
+            var url=urlInput.value.trim();
+            if(!url){showModalError('Укажите ссылку на страницу учебного плана');return;}
+            if(!compareFile){showModalError('Выберите файл (.xml или .plx) для проверки');return;}
+            showModalProgress(['Загрузка файла...','Парсинг учебного плана...','Сравнение с сайтом...','Формирование отчёта...']);
+            try{
+                var fd=new FormData();fd.append('file',compareFile);
+                var resp=await fetch(APP_BASE+'api/compare/json?url='+encodeURIComponent(url),{method:'POST',body:fd,headers:{'Accept':'application/json'}});
+                if(!resp.ok){var b=await resp.text();var em='Ошибка '+resp.status;try{var ed=JSON.parse(b);em=ed.detail||ed.message||em;}catch(e){em=b||em;}throw new Error(em.substring(0,200));}
+                var result=await resp.json();
+                localStorage.setItem('compareResult',JSON.stringify(result));
+                showModalSuccess('Проверка выполнена', 'Перенаправляем к отчёту...');
+                setTimeout(function(){window.location.href=APP_BASE+'report_detail.html';},900);
+            }catch(e){showModalError(e.message);console.error(e);}
+
+        }else if(currentMode==='files'){
+            if(multipleFiles.length===0){showModalError('Выберите хотя бы один файл для проверки');return;}
+            showModalProgress(['Загрузка файлов...','Парсинг учебных планов...','Сравнение с сайтом...','Формирование отчёта...']);
+            try{
+                var fd=new FormData();multipleFiles.forEach(function(f){fd.append('files',f);});
+                var resp=await fetch(APP_BASE+'api/compare/files/json',{method:'POST',body:fd});
+                if(!resp.ok){var b=await resp.text();var em='Ошибка '+resp.status;try{var ed=JSON.parse(b);em=ed.detail||ed.message||em;}catch(e){em=b||em;}throw new Error(em.substring(0,200));}
+                var results=await resp.json();
+                localStorage.setItem('compareResults',JSON.stringify(results));
+                var okC=results.results?results.results.filter(function(r){return r.status==='ok';}).length:0;
+                showModalSuccess('Проверка завершена', 'Совпадений: ' + okC + ' из ' + (results.results?results.results.length:0));
+                setTimeout(function(){window.location.href=APP_BASE+'report_list.html';},1000);
+            }catch(e){showModalError(e.message);console.error(e);}
+
+        }else if(currentMode==='smb'){
+            var pn=getCheckedPrograms();
+            if(pn.length===0){showModalError('Выберите хотя бы одну группу для проверки');return;}
+            showModalProgress(['Подключение к серверу...','Сканирование директорий...','Чтение и анализ файлов...','Сравнение с сайтом...','Формирование отчёта...']);
+            try{
+                var resp=await fetch(APP_BASE+'api/collect-and-compare',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({program_names:pn})});
+                if(!resp.ok){var b=await resp.text();var em='Ошибка '+resp.status;try{var ed=JSON.parse(b);em=ed.detail||ed.message||em;}catch(e){em=b||em;}throw new Error(em.substring(0,300));}
+                var results=await resp.json();
+                localStorage.setItem('compareResults',JSON.stringify(results));
+                var total=results.results?results.results.length:0;
+                var okC=results.results?results.results.filter(function(r){return r.status==='ok';}).length:0;
+                showModalSuccess('Сбор завершён', 'Обработано: ' + total + ' файлов, совпадений: ' + okC);
+                setTimeout(function(){window.location.href=APP_BASE+'report_list.html';},1200);
+            }catch(e){showModalError(e.message);console.error(e);}
+
+        }else{
+            showModalError('Выберите один из режимов проверки выше');
+        }
+    }
+
+    filePanelSubmitBtn.addEventListener('click', doSubmit);
+
+    // ========== DEV ==========
+    var devStatus=document.getElementById('devStatus'),devLoading=document.getElementById('devLoading');
+    function setDevStatus(html){devLoading.classList.add('hidden');devStatus.innerHTML=html;}
+    document.getElementById('devCheckBtn').addEventListener('click',async function(){
+        devLoading.classList.remove('hidden');
+        try{
+            var r=await fetch(APP_BASE+'api/status');var d=await r.json();
+            var html='';
+            Object.keys(d).forEach(function(k){
+                var v=d[k],color='text-slate-300';
+                if(v==='ok'||v.startsWith('ok'))color='text-emerald-400';
+                else if(v==='missing')color='text-yellow-400';
+                else if(v.startsWith('error'))color='text-rose-400';
+                html+='<div><span class="text-slate-500">'+esc(k)+':</span> <span class="'+color+'">'+esc(v)+'</span></div>';
+            });
+            setDevStatus(html);
+        }catch(e){setDevStatus('<div class="text-rose-400">Ошибка: '+esc(e.message)+'</div>');}
+    });
+    document.getElementById('devRefreshBtn').addEventListener('click',async function(){
+        devLoading.classList.remove('hidden');
+        devStatus.innerHTML='<div class="text-indigo-400 animate-pulse">Кеш обновляется, проверьте состояние...</div>';
+        try{
+            var r=await fetch(APP_BASE+'api/refresh-links',{method:'POST'});var d=await r.json();
+            devLoading.classList.add('hidden');
+            var status = d.status === 'already_running' ? 'уже запущено' : 'запущено';
+            devStatus.innerHTML = '<div class="text-emerald-400">Кеш обновляется (' + status + '), проверьте состояние</div>';
+            hierarchyData=null;
+            setTimeout(function(){document.getElementById('devCheckBtn').click();},2000);
+        }catch(e){devLoading.classList.add('hidden');devStatus.innerHTML='<div class="text-rose-400">Ошибка обновления: '+esc(e.message)+'</div>';}
+    });
+</script>
 </body>
 </html>

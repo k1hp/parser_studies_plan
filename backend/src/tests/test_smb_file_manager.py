@@ -1,16 +1,12 @@
 import sys
 import os
+from src.config import SMB_PATH, SMB_USERNAME, SMB_PASSWORD
 from src.services.file_manager import SMBFileManager
 
 
 def test_smb_connection():
 
-    # Создание экземпляра SMBFileManager
-    smb = SMBFileManager(
-        "//hostname/Users/UserName/Documents/StudyPlans",
-        username="YourUsername",
-        password="YourPassword"
-    )
+    smb = SMBFileManager(SMB_PATH, SMB_USERNAME, SMB_PASSWORD)
 
     print(f"Подключение к SMB шаре...")
     print(f"Путь: {smb.smb_path}")

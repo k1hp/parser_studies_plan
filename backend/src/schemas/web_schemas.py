@@ -21,3 +21,7 @@ class CurriculumModel(BaseModel):
     gia_program: bool = Field(..., description="Наличие раздела 'ГИА'")
     education_program_vosp: bool = Field(..., description="Наличие раздела 'Рабочая программа воспитания'")
     curriculum_plan: bool = Field(..., description="Наличие Календарного плана воспитательной работы")
+
+
+class CollectAndCompareRequest(BaseModel):
+    program_names: list[str]

@@ -7,9 +7,10 @@ from datetime import datetime
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
-from backend.src.services.file_manager import SMBFileManager
-from backend.src.services.xml_parsing_service import XmlParsingService
-from backend.src.utils import applogger
+from src.config import SMB_PATH, SMB_USERNAME, SMB_PASSWORD
+from src.services.file_manager import SMBFileManager
+from src.services.xml_parsing_service import XmlParsingService
+from src.utils import applogger
 
 
 class SMBToXMLParserTester:
@@ -321,22 +322,11 @@ class SMBToXMLParserTester:
 def main():
     """Главная функция для запуска тестов"""
 
-    # Конфигурация SMB
-    SMB_CONFIG = {
-        "smb_path": "smb://127.0.0.1/Share",
-        "username": "username",
-        "password": "password"
-    }
-
     print("ТЕСТ ПЕРЕДАЧИ ДАННЫХ ИЗ SMB В XmlParserService")
     print(f"Время начала: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
     # Создаем тестер
-    tester = SMBToXMLParserTester(
-        smb_path=SMB_CONFIG["smb_path"],
-        username=SMB_CONFIG["username"],
-        password=SMB_CONFIG["password"]
-    )
+    tester = SMBToXMLParserTester(SMB_PATH, SMB_USERNAME, SMB_PASSWORD)
 
     # Выбираем режим тестирования
     print("\nВыберите режим тестирования:")
@@ -362,17 +352,7 @@ def main():
 def test_all_non_empty_files():
     """Функция для автоматического тестирования всех непустых файлов"""
 
-    SMB_CONFIG = {
-        "smb_path": "smb://127.0.0.1/Share",
-        "username": "username",
-        "password": "password"
-    }
-
-    tester = SMBToXMLParserTester(
-        smb_path=SMB_CONFIG["smb_path"],
-        username=SMB_CONFIG["username"],
-        password=SMB_CONFIG["password"]
-    )
+    tester = SMBToXMLParserTester(SMB_PATH, SMB_USERNAME, SMB_PASSWORD)
 
     # Тестируем все непустые файлы (до 15)
     results = tester.test_multiple_files(max_files=15)
