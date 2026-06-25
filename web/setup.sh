@@ -2,10 +2,13 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 
-echo "Npm requirements"
-npm install
+echo "Build Tailwind CSS (docker)"
 
-echo "Build Tailwind"
-npx tailwindcss -i css/tailwind.src.css -o css/tailwind.css -m
+docker run --rm \
+  --user "$(id -u):$(id -g)" \
+  -v "$PWD":/app \
+  -w /app \
+  node:20-alpine \
+  sh -c "npm install && npx tailwindcss -i css/tailwind.src.css -o css/tailwind.css -m"
 
 echo "Complete!!!"
