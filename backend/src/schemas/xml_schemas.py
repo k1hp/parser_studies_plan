@@ -14,8 +14,12 @@ class DisciplineDetail(BaseModel):
     def to_string(self) -> str:
         return f"{self.discipline_name} {self.discipline_code}"
 
+class PracticeDetail(DisciplineDetail):
+    pass
+
 class ResponseModel(BaseModel):
     direction_code: str = Field(..., description="Код направления (шифр)")
     direction_name: str = Field(..., description="Название направления")
     start_year: int = Field(..., description="Год начала обучения")
     disciplines: list[DisciplineDetail] = Field(..., description="Список дисциплин")
+    practices: list[PracticeDetail] = Field(default_factory=list, description="Список практик")

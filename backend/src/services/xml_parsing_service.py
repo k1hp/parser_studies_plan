@@ -5,7 +5,7 @@ import re
 from pathlib import Path
 
 from src.utils import applogger
-from src.schemas.xml_schemas import ResponseModel, DisciplineDetail
+from src.schemas.xml_schemas import ResponseModel, DisciplineDetail, PracticeDetail
 from src.schemas.web_schemas import CurriculumModel
 # from src.models.response_model_xml_parser import ResponseModel, DisciplineDetail
 from src.services.file_manager import FileManager
@@ -13,7 +13,6 @@ from src.services.pdf_service import PDFService
 
 
 class PlxDataExtractor:
-    """Класс, отвечающий за извлечение данных из XML-структуры, с учетом различных форматов представления данных и обеспечивающий устойчивость к отсутствию данных."""
 
     @staticmethod
     def extract_direction_code(root: ET.Element) -> str:
@@ -98,6 +97,39 @@ class PlxDataExtractor:
             applogger.error(f"Ошибка при извлечении информации о дисциплинах: {e}")
             return []
 
+    @staticmethod
+    def extract_items(root: ET.Element) -> tuple[list[DisciplineDetail], list[PracticeDetail]]:
+        disciplines = []
+        practices = []
+        seen_disciplines = set()
+        seen_practices = set()
+
+        for elem in root.iter():
+            if elem.tag.endswith('ПланыСтроки'):
+                name = elem.get('Дисциплина', '').strip()
+                code = elem.get('ДисциплинаКод', '').strip() or None
+                obj_type = elem.get('ТипОбъекта', '')
+
+                if not name:
+                    continue
+
+                if obj_type == '2':  # дисциплина
+                    key = (name, code)
+                    if key not in seen_disciplines:
+                        seen_disciplines.add(key)
+                        disciplines.append(
+                            DisciplineDetail(discipline_name=name, discipline_code=code)
+                        )
+                elif obj_type == '3':  # практика
+                    key = (name, code)
+                    if key not in seen_practices:
+                        seen_practices.add(key)
+                        practices.append(
+                            PracticeDetail(discipline_name=name, discipline_code=code)
+                        )
+
+        return disciplines, practices
+
 class XmlParsingService:
     """Класс, отвечающий за парсинг XML-структур."""
 
@@ -127,14 +159,12 @@ class XmlParsingService:
             applogger.error(f"Неожиданная ошибка при парсинге: {e}")
             return None
 
-    def extract_all(self, contents: list[bytes]) -> list[ResponseModel]:
-        """Извлекает данные из нескольких XML-файлов, возвращая список моделей ResponseModel."""
+    def extract_all(self, contents: list[bytes]) -> list[ResponseModel | PracticeDetail]:
         results = []
-
         for content in contents:
             response = self.extract_from_content(content)
-            results.append(response)
-
+            if response:
+                results.append(response)
         return results
 
     def extract_from_content(self, content: bytes) -> ResponseModel | None:
@@ -148,7 +178,7 @@ class XmlParsingService:
         direction_code = PlxDataExtractor.extract_direction_code(root)
         direction_name, profile_name = PlxDataExtractor.extract_direction_name(root)
         start_year = PlxDataExtractor.extract_start_year(root)
-        disciplines = PlxDataExtractor.extract_disciplines_details(root)
+        disciplines, practices = PlxDataExtractor.extract_items(root)
 
         full_direction_name = f"{direction_name}, {profile_name}" if profile_name else direction_name
 
@@ -156,7 +186,8 @@ class XmlParsingService:
             direction_code=direction_code,
             direction_name=full_direction_name,
             start_year=start_year,
-            disciplines=disciplines
+            disciplines=disciplines,
+            practices=practices
         )
 
 class WebParsingService:
@@ -213,7 +244,6 @@ class WebParsingService:
 
 
 if __name__ == "__main__":
-    """Пример использования XmlParsingService для извлечения данных из XML-файлов и создания PDF-отчетов на основе этих данных."""  
     pdf_service = PDFService(template_dir="../templates")
     current_script_dir = os.path.dirname(os.path.abspath(__file__))
     # folder_path = os.path.abspath(os.path.join(current_script_dir, "..", "directory"))
