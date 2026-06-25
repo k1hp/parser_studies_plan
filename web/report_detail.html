@@ -139,7 +139,7 @@
             html += '</details>';
         }
         if (hasExtra) {
-            html += '<details open class="mt-2"><summary class="text-sm font-medium text-blue-400 cursor-pointer hover:text-blue-300 transition-colors">Лишние на сайте (' + sec.missing_in_xml.length + ')</summary>';
+            html += '<details open class="mt-2"><summary class="text-sm font-medium text-blue-400 cursor-pointer hover:text-blue-300 transition-colors">Есть на сайте, но нет в файле (' + sec.missing_in_xml.length + ')</summary>';
             html += '<div class="mt-2 ml-2">' + sec.missing_in_xml.map(renderItem).join('') + '</div>';
             html += '</details>';
         }
@@ -241,7 +241,7 @@
             var ms = (secs[k].missing_on_site || []).length;
             var mx = (secs[k].missing_in_xml || []).length;
             if (ms + mx > 0) {
-                issues.push(SECTION_LABELS[k] + ': ' + (ms ? '&ndash;' + ms + ' на сайте ' : '') + (mx ? '+' + mx + ' лишних' : ''));
+                issues.push(SECTION_LABELS[k] + ': ' + (ms ? '&ndash;' + ms + ' на сайте ' : '') + (mx ? '+' + mx + ' есть на сайте, нет в файле' : ''));
             }
         });
         if (issues.length) {
@@ -464,7 +464,7 @@
                     h += '</div></details>';
                 }
                 if (s.missing_in_xml && s.missing_in_xml.length) {
-                    h += '<details open><summary class="extra">▼ Присутствуют на сайте, но не найдены в плане (' + s.missing_in_xml.length + ')</summary>';
+                    h += '<details open><summary class="extra">▼ Есть на сайте, но нет в файле (' + s.missing_in_xml.length + ')</summary>';
                     h += '<div class="discipline-list">';
                     s.missing_in_xml.forEach(function(d) {
                         h += '<div class="discipline-item"><span class="disc-code">' + esc(d.discipline_code || '—') + '</span><span class="disc-name">' + esc(d.discipline_name) + '</span></div>';

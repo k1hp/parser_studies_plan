@@ -101,7 +101,7 @@
         if (totalMissing === 0 && totalExtra === 0) return '<span class="text-xs text-emerald-400">Всё совпало</span>';
         var parts = [];
         if (totalMissing > 0) parts.push('&ndash;' + totalMissing + ' на сайте');
-        if (totalExtra > 0)   parts.push('+' + totalExtra + ' лишних');
+        if (totalExtra > 0)   parts.push('+' + totalExtra + ' есть на сайте, нет в файле');
         return '<span class="text-xs text-yellow-400">' + parts.join(', ') + '</span>';
     }
 

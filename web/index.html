@@ -92,26 +92,10 @@
     </header>
 
     <main class="relative pt-20 pb-12 px-4">
-    <div class="mx-auto max-w-2xl relative">
+    <div class="flex gap-6 justify-center items-start">
 
-        <!-- Floating sidebar with selected files + submit -->
-        <div id="filePanel" class="hidden fixed right-4 top-24 w-72 z-20">
-            <div class="bg-slate-800/90 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl shadow-black/40 overflow-hidden">
-                <div class="px-4 py-3 border-b border-white/5 flex items-center justify-between">
-                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Готово к проверке</span>
-                    <span id="filePanelCount" class="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-medium">0</span>
-                </div>
-                <div id="filePanelList" class="max-h-64 overflow-y-auto divide-y divide-white/5 px-2 text-xs"></div>
-                <div class="p-3 border-t border-white/5">
-                    <button id="filePanelSubmitBtn"
-                        class="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 via-blue-600 to-purple-600 text-white font-bold text-sm
-                        shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/30 hover:brightness-110
-                        transition-all active:scale-[0.98] tracking-tight">
-                        Проверить
-                    </button>
-                </div>
-            </div>
-        </div>
+        <!-- Main form column -->
+        <div class="flex-1 max-w-2xl">
 
         <!-- Mode selector -->
         <div class="flex gap-1 p-1.5 bg-slate-800/60 backdrop-blur rounded-xl mb-6 border border-white/5">
@@ -259,7 +243,28 @@
             </div>
         </div>
 
-    </div>
+        </div><!-- close main form column -->
+
+        <!-- Side panel -->
+        <div id="filePanel" class="hidden w-72 shrink-0 sticky top-24">
+            <div class="bg-slate-800/90 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl shadow-black/40 overflow-hidden">
+                <div class="px-4 py-3 border-b border-white/5 flex items-center justify-between">
+                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Готово к проверке</span>
+                    <span id="filePanelCount" class="text-[10px] px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 font-medium">0</span>
+                </div>
+                <div id="filePanelList" class="max-h-64 overflow-y-auto divide-y divide-white/5 px-2 text-xs"></div>
+                <div class="p-3 border-t border-white/5">
+                    <button id="filePanelSubmitBtn"
+                        class="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-600 via-blue-600 to-purple-600 text-white font-bold text-sm
+                        shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/30 hover:brightness-110
+                        transition-all active:scale-[0.98] tracking-tight">
+                        Проверить
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- close flex container -->
     </main>
 </div>
 
@@ -627,6 +632,7 @@
     }
 
     function attachTreeEvents() {
+        // Tree toggles
         hierarchyTree.querySelectorAll('.tree-toggle').forEach(function(t){
             t.addEventListener('click',function(e){e.stopPropagation();
                 var ch=this.parentElement.nextElementSibling;
@@ -634,21 +640,67 @@
                 var collapsed=ch.classList.toggle('tree-collapsed');
                 this.textContent=collapsed?'▶':'▼';});
         });
-        hierarchyTree.querySelectorAll('.tree-toggle').forEach(function(t){
-            var row = t.parentElement;
-            if (!row) return;
+        // Row clicks toggle tree
+        hierarchyTree.querySelectorAll('.flex.items-center.cursor-pointer.select-none').forEach(function(row){
             row.addEventListener('click', function(e) {
                 if (e.target.tagName === 'INPUT' || e.target.closest('label')) return;
                 var toggle = this.querySelector('.tree-toggle');
                 if (toggle) toggle.click();
             });
         });
-        hierarchyTree.querySelectorAll('.inst-cb').forEach(function(cb){cb.addEventListener('change',function(){var n=this.closest('.flex.items-center').parentElement;n.querySelectorAll('.tree-cb').forEach(function(c){c.checked=cb.checked;c.indeterminate=false;});updateSmbCount();});});
-        hierarchyTree.querySelectorAll('.dept-cb').forEach(function(cb){cb.addEventListener('change',function(){var n=this.closest('.flex.items-center').parentElement;n.querySelectorAll('.prog-cb').forEach(function(c){c.checked=cb.checked;});updateParentInst(this);updateSmbCount();});});
-        hierarchyTree.querySelectorAll('.prog-cb').forEach(function(cb){cb.addEventListener('change',function(){updateParentDept(this);updateSmbCount();});});
+        // Institute checkbox → toggles ALL child checkboxes inside its instDiv
+        hierarchyTree.querySelectorAll('.inst-cb').forEach(function(cb){
+            cb.addEventListener('change', function(){
+                var instDiv = this.closest('.flex.items-center').parentElement.parentElement;
+                instDiv.querySelectorAll('.tree-cb').forEach(function(c){c.checked = cb.checked; c.indeterminate = false;});
+                updateSmbCount();
+            });
+        });
+        // Department checkbox → toggles program checkboxes within its deptDiv
+        hierarchyTree.querySelectorAll('.dept-cb').forEach(function(cb){
+            cb.addEventListener('change', function(){
+                var deptDiv = this.closest('.flex.items-center').parentElement.parentElement;
+                deptDiv.querySelectorAll('.prog-cb').forEach(function(c){c.checked = cb.checked;});
+                updateParentInst(this);
+                updateSmbCount();
+            });
+        });
+        // Program checkbox → update parent dept and inst states
+        hierarchyTree.querySelectorAll('.prog-cb').forEach(function(cb){
+            cb.addEventListener('change', function(){
+                updateParentDept(this);
+                updateSmbCount();
+            });
+        });
     }
-    function updateParentDept(cb){var n=cb.closest('.flex.items-center').parentElement,p=n.querySelectorAll('.prog-cb'),all=true,none=true;p.forEach(function(c){if(c.checked)none=false;else all=false;});var dc=n.querySelector('.dept-cb');dc.checked=all;dc.indeterminate=!all&&!none;updateParentInst(dc);}
-    function updateParentInst(cb){var inst=cb.closest('.flex.items-center').parentElement.parentElement.parentElement;var dcs=inst.querySelectorAll('.dept-cb');var all=true,none=true;dcs.forEach(function(c){if(c.checked)none=false;else all=false;if(c.indeterminate){all=false;none=false;}});var ic=inst.querySelector('.inst-cb');ic.checked=all;ic.indeterminate=!all&&!none;}
+    function updateParentDept(cb){
+        var deptDiv = cb.closest('.flex.items-center').parentElement.parentElement;
+        var progs = deptDiv.querySelectorAll('.prog-cb');
+        var all = true, none = true;
+        progs.forEach(function(c){if(c.checked)none=false;else all=false;});
+        var dc = deptDiv.querySelector('.dept-cb');
+        if (!dc) return;
+        dc.checked = all;
+        dc.indeterminate = !all && !none;
+        updateParentInst(dc);
+    }
+    function updateParentInst(cb){
+        // cb is a dept-cb, deptDiv = its parent's parent
+        var deptDiv = cb.closest('.flex.items-center').parentElement.parentElement;
+        // instDiv is deptDiv's parent (which is instBody), then instBody's parent
+        var instBody = deptDiv.parentElement;
+        var instDiv = instBody.parentElement;
+        var dcs = instDiv.querySelectorAll('.dept-cb');
+        var all = true, none = true;
+        dcs.forEach(function(c){
+            if(c.checked) none = false; else all = false;
+            if(c.indeterminate){all = false; none = false;}
+        });
+        var ic = instDiv.querySelector('.inst-cb');
+        if (!ic) return;
+        ic.checked = all;
+        ic.indeterminate = !all && !none;
+    }
     function getCheckedPrograms(){var n=[];hierarchyTree.querySelectorAll('.prog-cb:checked').forEach(function(c){n.push(c.dataset.name);});return n;}
     function updateSmbCount(){if(!hierarchyTree||hierarchyTree.style.display==='none')return;var c=hierarchyTree.querySelectorAll('.prog-cb:checked').length;selectedCount.textContent=c>0?'Выбрано групп: '+c:'Ничего не выбрано';syncPanel();}
     selectAllBtn.addEventListener('click',function(){hierarchyTree.querySelectorAll('.tree-cb').forEach(function(c){c.checked=true;c.indeterminate=false;});updateSmbCount();});
