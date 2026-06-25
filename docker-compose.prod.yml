@@ -3,9 +3,34 @@ services:
     build:
       context: ./backend
     container_name: fastapi-service-analyze
+    environment:
+      - SELENIUM_URL=http://selenium-chrome:4444/wd/hub
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     networks:
       - server-network
     restart: always
+    depends_on:
+      - selenium-chrome
+      - redis
+
+  selenium-chrome:
+    image: selenium/standalone-chrome:latest
+    container_name: selenium-chrome
+    shm_size: "2gb"
+    environment:
+      - SE_NODE_MAX_SESSIONS=2
+      - SE_NODE_SESSION_TIMEOUT=300
+    networks:
+      - server-network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    networks:
+      - server-network
+    restart: unless-stopped
 
   nginx:
     build:

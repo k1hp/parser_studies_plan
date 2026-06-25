@@ -36,7 +36,10 @@ def print_response(response: ResponseModel) -> None:
         applogger.debug("\n  Дисциплины не найдены")
 
 def generate_openapi_path(addition_path: str = ROOT_ADDITION_PATH) -> str:
-    return "/" + addition_path.strip("/") + "/docs/openapi.json"
+    clean_path = addition_path.replace('"', '').replace("'", "").strip("/")
+
+    base_url = f"/{clean_path}" if clean_path else ""
+    return base_url + "/docs/openapi.json"
 
 applogger = AppLogger(level="DEBUG").get_logger()
 

@@ -1,4 +1,5 @@
 import json
+import os
 from selenium import webdriver
 from pathlib import Path
 from selenium.webdriver.common.by import By
@@ -6,10 +7,15 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
 
+import redis
 
 BASE_URL = "https://mauniver.ru"
 
 CURRENT_DIR = Path(__file__).resolve().parent
+
+SELENIUM_URL = os.getenv("SELENIUM_URL", "http://selenium-chrome:4444/wd/hub")
+REDIS_HOST = os.getenv("REDIS_HOST", "redis")
+REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
 
 
 # =========================================================
@@ -20,19 +26,15 @@ def setup_driver():
 
     options = webdriver.ChromeOptions()
 
-    # для адекватов, чтобы видеть процесс парсинга
-    # options.add_argument("--headless=new")
-
+    options.add_argument("--headless=new")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--window-size=1920,1080")
 
-    driver = webdriver.Chrome(
-        service=Service(ChromeDriverManager().install()),
+    driver = webdriver.Remote(
+        command_executor=SELENIUM_URL,
         options=options
     )
-
-    options.add_argument("--headless=new")
-    options.add_argument("--window-size=1920,1080")
 
     return driver
 
@@ -318,12 +320,69 @@ def get_flat_mapping(hierarchy):
 
 
 # =========================================================
+# ФУНКЦИЯ 3
+# НЕЧЁТКИЙ ПОИСК ПРОГРАММЫ В REDIS
+# =========================================================
+
+def find_program_url(query: str, min_score: float = 60.0) -> str | None:
+
+    from rapidfuzz import fuzz
+
+    r = redis.Redis(
+        host=REDIS_HOST,
+        port=REDIS_PORT,
+        decode_responses=True
+    )
+
+    raw = r.get("flat_mapping")
+
+    if not raw:
+        return None
+
+    programs = json.loads(raw)
+
+    best_score = 0
+    best_url = None
+
+    for name, url in programs.items():
+        score = fuzz.ratio(query.lower(), name.lower())
+        if score > best_score:
+            best_score = score
+            best_url = url
+
+    return best_url if best_score >= min_score else None
+
+
+# =========================================================
+# ФУНКЦИЯ 4
+# ОБНОВЛЕНИЕ КЕША В REDIS
+# =========================================================
+
+def refresh_redis() -> dict:
+
+    hierarchy = get_hierarchy_json()
+    flat = get_flat_mapping(hierarchy)
+
+    r = redis.Redis(
+        host=REDIS_HOST,
+        port=REDIS_PORT,
+        decode_responses=True
+    )
+
+    pipe = r.pipeline()
+    pipe.set("flat_mapping", json.dumps(flat, ensure_ascii=False))
+    pipe.set("hierarchy", json.dumps(hierarchy, ensure_ascii=False))
+    pipe.execute()
+
+    return {"status": "ok", "flat_count": len(flat)}
+
+
+# =========================================================
 # MAIN
 # =========================================================
 
 if __name__ == "__main__":
 
-#  для адекватов 
     hierarchy = get_hierarchy_json()
 
     hierarchy_path = CURRENT_DIR / "hierarchy.json"
@@ -343,23 +402,31 @@ if __name__ == "__main__":
 
     print("hierarchy.json saved")
 
-    # для редиски
+    flat = get_flat_mapping(hierarchy)
 
-    # flat = get_flat_mapping(hierarchy)
+    flat_path = CURRENT_DIR / "flat_mapping.json"
 
-    # flat_path = CURRENT_DIR / "flat_mapping.json"
+    with open(
+        flat_path,
+        "w",
+        encoding="utf-8"
+    ) as f:
 
-    # with open(
-    #     flat_path,
-    #     "w",
-    #     encoding="utf-8"
-    # ) as f:
+        json.dump(
+            flat,
+            f,
+            ensure_ascii=False,
+            indent=2
+        )
 
-    #     json.dump(
-    #         flat,
-    #         f,
-    #         ensure_ascii=False,
-    #         indent=2
-    #     )
+    print("flat_mapping.json saved")
 
-    # print("flat_mapping.json saved")
+    r = redis.Redis(
+        host=REDIS_HOST,
+        port=REDIS_PORT,
+        decode_responses=True
+    )
+
+    r.set("flat_mapping", json.dumps(flat, ensure_ascii=False))
+
+    print(f"Redis: flat_mapping saved ({len(flat)} programs)")

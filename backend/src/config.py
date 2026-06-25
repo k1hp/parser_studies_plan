@@ -14,3 +14,6 @@ SMB_USERNAME = os.getenv("SMB_USERNAME", "")
 SMB_PASSWORD = os.getenv("SMB_PASSWORD", "")
 
 ROOT_ADDITION_PATH = os.getenv("ROOT_ADDITION_PATH", "")
+
+WEEK = 7 * 24 * 60 * 60
+RETRY_DELAY = 5 * 60 * 60
