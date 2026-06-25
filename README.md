@@ -16,7 +16,17 @@ cp .env.example .env
 ```
 И укажите ваши чувствительные данные
 
-#### 2. запустите compose сборку
+#### 2. соберите tailwind
 ```
+cd web 
+chmod +x setup.sh
+./setup.sh
+```
+В логах должно отобразиться `Complete!!!`
+![img.png](img.png)
+
+#### 3. запустите compose сборку
+```
+# из корня проекта
 docker compose -f docker-compose.prod.yml up --build --remove-orphans
 ```

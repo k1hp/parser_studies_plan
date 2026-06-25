@@ -4,16 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Отчёт по группе — Проверка учебных планов</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: { extend: { colors: { accent: { 400:'#818cf8', 500:'#6366f1', 600:'#4f46e5' } } } }
-        }
-    </script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        body { font-family: 'Inter', system-ui, sans-serif; }
-    </style>
     <script>
         var APP_BASE = (function () {
             var url = new URL(window.location.href);
@@ -21,10 +11,26 @@
             var p = url.pathname;
             return p.substring(0, p.lastIndexOf('/') + 1);
         })();
-        var link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = APP_BASE + 'css/global.css';
-        document.head.appendChild(link);
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body { font-family: 'Inter', system-ui, sans-serif; }
+    </style>
+    <script>
+        (function() {
+            var tailwind = document.createElement('link');
+            tailwind.rel = 'stylesheet';
+            tailwind.href = APP_BASE + 'css/tailwind.css';
+            document.head.appendChild(tailwind);
+            var global = document.createElement('link');
+            global.rel = 'stylesheet';
+            global.href = APP_BASE + 'css/global.css';
+            document.head.appendChild(global);
+        })();
+        document.addEventListener('DOMContentLoaded', function() {
+            var logoImg = document.getElementById('logoImg');
+            if (logoImg) logoImg.src = APP_BASE + 'pic/logo.PNG';
+        });
     </script>
 </head>
 <body class="min-h-screen bg-gradient-to-br from-slate-950 via-indigo-950 to-slate-950">
@@ -34,7 +40,7 @@
 
 <header class="fixed top-0 inset-x-0 z-30 h-14 bg-slate-950/80 backdrop-blur-xl border-b border-white/5 flex items-center px-4 lg:px-8">
     <a href="https://mauniver.ru/" class="flex items-center gap-3 hover:opacity-80 transition-opacity shrink-0">
-        <img src="pic/logo.PNG" alt="МАУ" class="h-9">
+        <img id="logoImg" alt="МАУ" class="h-9">
     </a>
     <div class="flex-1"></div>
     <button onclick="window.location.href = APP_BASE"

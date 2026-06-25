@@ -3,9 +3,34 @@ services:
     build:
       context: ./backend
     container_name: fastapi-service-analyze
+    environment:
+      - SELENIUM_URL=http://selenium-chrome:4444/wd/hub
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     networks:
       - server-network
     restart: always
+    depends_on:
+      - selenium-chrome
+      - redis
+
+  selenium-chrome:
+    image: selenium/standalone-chrome:latest
+    container_name: selenium-chrome
+    shm_size: "2gb"
+    environment:
+      - SE_NODE_MAX_SESSIONS=2
+      - SE_NODE_SESSION_TIMEOUT=300
+    networks:
+      - server-network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    networks:
+      - server-network
+    restart: unless-stopped
 
   nginx:
     build:
@@ -18,14 +43,9 @@ services:
     volumes:
       - ./web:/usr/share/nginx/html
       - ./web/template.nginx.conf:/etc/nginx/templates/default.conf.template:ro
-    environment:
-      # префикс, который подставится в конфиг (в вашем случае /checkplans)
-      - DOCS_PREFIX=${ROOT_ADDITION_PATH}
     networks:
       - server-network
-
     restart: always
-
     depends_on:
       - fastapi-service-analyze
 
@@ -35,7 +55,7 @@ services:
     ports:
       - "80:80"
     volumes:
-      - ./my-apache.conf:/usr/local/apache2/conf/extra/custom-proxy.conf:ro
+      - ./web/backup/my-apache.conf:/usr/local/apache2/conf/extra/custom-proxy.conf:ro
     # Команда при старте: включаем модули прокси в главном конфиге и подгружаем ваш файл
     command: >
       sh -c "

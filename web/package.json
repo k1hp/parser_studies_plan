@@ -1,0 +1,10 @@
+{
+  "name": "parser-studies-plan-web",
+  "private": true,
+  "scripts": {
+    "build:css": "npx tailwindcss -i css/tailwind.src.css -o css/tailwind.css -m"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.0"
+  }
+}
