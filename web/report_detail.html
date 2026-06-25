@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Отчёт по группе — Проверка учебных планов</title>
+    <script>
+        var APP_BASE = (function () {
+            var p = window.location.pathname;
+            return p.substring(0, p.lastIndexOf('/') + 1);
+        })();
+        var link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = APP_BASE + 'css/global.css';
+        document.head.appendChild(link);
+    </script>
+</head>
+<body>
+    <div class="content">
+        <header>
+            <h1>Отчёт по группе</h1>
+        </header>
+
+        <div id="errorMessage" class="error-message" style="display:none;"></div>
+
+        <div id="resultContent"></div>
+
+        <div class="conteiner result-buttons" style="margin-top:24px;">
+            <button class="btn submitBtn" onclick="window.location.href = APP_BASE">Назад к форме</button>
+            <button class="btn submitBtn" onclick="downloadReport('pdf')">Скачать PDF</button>
+            <button class="btn submitBtn" onclick="downloadReport('html')">Скачать HTML</button>
+        </div>
+    </div>
+
+    <script>
+        var elError = document.getElementById('errorMessage');
+        var elResult = document.getElementById('resultContent');
+
+        function esc(s) { return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+        function showError(msg) {
+            elError.style.display = 'block';
+            elError.innerHTML = 'Ошибка: ' + msg;
+            elResult.innerHTML = '';
+        }
+
+        var SECTION_LABELS = {
+            working_programs: 'Рабочие программы дисциплин',
+            fos_materials: 'ФОС материалы',
+            practic_programs: 'Программы практик',
+            methodical_materials: 'Методические материалы'
+        };
+
+        var FLAG_LABELS = {
+            education_program: 'Образовательная программа',
+            calendar_graphic: 'Календарный учебный график',
+            education_plan: 'Учебный план',
+            gia_program: 'ГИА',
+            education_program_vosp: 'Рабочая программа воспитания',
+            curriculum_plan: 'Календарный план воспитательной работы'
+        };
+
+        // ===== SINGLE RESULT =====
+
+        function renderItem(item) {
+            var code = item.discipline_code ? '<span class="code">' + esc(item.discipline_code) + '</span>' : '';
+            return '<div class="item">' + code + ' ' + esc(item.discipline_name) + '</div>';
+        }
+
+        function renderSection(key, sec) {
+            var hasMissing = (sec.missing_on_site && sec.missing_on_site.length > 0);
+            var hasExtra = (sec.missing_in_xml && sec.missing_in_xml.length > 0);
+            var allOk = !hasMissing && !hasExtra;
+            var title = SECTION_LABELS[key] || key;
+
+            var html = '<div class="section ' + (allOk ? 'ok' : 'warn') + '">';
+            html += '<div class="section-header">';
+            html += '<span class="section-title">' + title + '</span>';
+            html += '<span class="badge">' + (allOk ? 'Все совпало' : 'Есть расхождения') + '</span>';
+            html += '</div>';
+
+            if (allOk && sec.matched) {
+                html += '<div class="section-meta">Совпало: ' + sec.matched.length + ' дисциплин</div>';
+            }
+            if (hasMissing) {
+                html += '<details open><summary class="warn">Отсутствуют на сайте (' + sec.missing_on_site.length + ')</summary>';
+                html += '<div class="items">' + sec.missing_on_site.map(renderItem).join('') + '</div>';
+                html += '</details>';
+            }
+            if (hasExtra) {
+                html += '<details open><summary class="extra">Лишние на сайте (' + sec.missing_in_xml.length + ')</summary>';
+                html += '<div class="items">' + sec.missing_in_xml.map(renderItem).join('') + '</div>';
+                html += '</details>';
+            }
+
+            html += '</div>';
+            return html;
+        }
+
+        function displaySingle(data) {
+            var html = '';
+
+            html += '<div class="info-block">';
+            html += '<h3>Основная информация</h3>';
+            html += '<table class="info-table">';
+            html += '<tr><td>Специальность</td><td>' + esc(data.specialty) + '</td></tr>';
+            html += '<tr><td>Код направления</td><td>' + esc(data.discipline_code) + '</td></tr>';
+            html += '<tr><td>Год набора</td><td>' + esc(String(data.curriculum_year)) + '</td></tr>';
+            html += '<tr><td>Уровень образования</td><td>' + esc(data.lvl_education) + '</td></tr>';
+            html += '<tr><td>Форма обучения</td><td>' + esc(data.form_education) + '</td></tr>';
+            html += '</table>';
+            html += '</div>';
+
+            if (data.flags) {
+                html += '<div class="info-block">';
+                html += '<h3>Наличие разделов</h3>';
+                html += '<table class="info-table">';
+                Object.keys(FLAG_LABELS).forEach(function(k) {
+                    var ok = data.flags[k];
+                    html += '<tr><td>' + FLAG_LABELS[k] + '</td>';
+                    html += '<td class="' + (ok ? 'good' : 'bad') + '">' + (ok ? 'Есть' : 'Отсутствует') + '</td></tr>';
+                });
+                html += '</table>';
+                html += '</div>';
+            }
+
+            if (data.sections) {
+                html += '<h3>Сравнение по разделам</h3>';
+                Object.keys(data.sections).forEach(function(k) {
+                    html += renderSection(k, data.sections[k]);
+                });
+            }
+
+            elResult.innerHTML = html;
+        }
+
+        // ===== BATCH RESULT =====
+
+        function cardBadge(result) {
+            var cls, text;
+            if (result.status === 'ok' && result.data) {
+                var hasIssues = false;
+                var secs = result.data.sections || {};
+                Object.keys(secs).forEach(function(k) {
+                    if ((secs[k].missing_on_site && secs[k].missing_on_site.length) ||
+                        (secs[k].missing_in_xml && secs[k].missing_in_xml.length)) {
+                        hasIssues = true;
+                    }
+                });
+                cls = hasIssues ? 'card-warn' : 'card-ok';
+                text = hasIssues ? 'Есть расхождения' : 'Все совпало';
+            } else if (result.status === 'url_not_found') {
+                cls = 'card-fail'; text = 'Программа не найдена';
+            } else if (result.status === 'year_mismatch') {
+                cls = 'card-warn'; text = 'Год не найден на сайте';
+            } else {
+                cls = 'card-fail'; text = 'Ошибка парсинга';
+            }
+            return '<span class="card-badge ' + cls + '">' + text + '</span>';
+        }
+
+        function cardSummary(result) {
+            if (result.status !== 'ok' || !result.data) {
+                return '<div class="card-error">' + esc(result.error || 'Неизвестная ошибка') + '</div>';
+            }
+            var d = result.data;
+            var lines = [
+                ['Код направления', d.discipline_code],
+                ['Год набора', d.curriculum_year],
+                ['Уровень', d.lvl_education],
+                ['Форма', d.form_education],
+            ];
+            var html = '<div class="card-meta">';
+            lines.forEach(function(l) {
+                html += '<div class="meta-row"><span>' + l[0] + ':</span> ' + esc(String(l[1])) + '</div>';
+            });
+            html += '</div>';
+
+            // Quick mismatch counters
+            var secs = d.sections || {};
+            var issues = [];
+            Object.keys(secs).forEach(function(k) {
+                var ms = (secs[k].missing_on_site || []).length;
+                var mx = (secs[k].missing_in_xml || []).length;
+                if (ms + mx > 0) {
+                    issues.push(SECTION_LABELS[k] + ': ' + (ms ? '-' + ms + ' на сайте ' : '') + (mx ? '+' + mx + ' лишних' : ''));
+                }
+            });
+            if (issues.length) {
+                html += '<div class="card-issues">' + issues.join('<br>') + '</div>';
+            }
+            return html;
+        }
+
+        function renderCardDetail(result) {
+            if (result.status !== 'ok' || !result.data) return '';
+            var d = result.data;
+            var html = '<div style="margin-top:16px;padding-top:16px;border-top:1px solid #e0e0e0;">';
+
+            if (d.flags) {
+                html += '<div style="margin-bottom:16px"><h4 style="margin:0 0 8px 0">Наличие разделов</h4>';
+                html += '<table class="info-table">';
+                Object.keys(FLAG_LABELS).forEach(function(k) {
+                    var ok = d.flags[k];
+                    html += '<tr><td>' + FLAG_LABELS[k] + '</td><td class="' + (ok ? 'good' : 'bad') + '">' + (ok ? 'Есть' : 'Отсутствует') + '</td></tr>';
+                });
+                html += '</table></div>';
+            }
+
+            if (d.sections) {
+                Object.keys(d.sections).forEach(function(k) {
+                    html += renderSection(k, d.sections[k]);
+                });
+            }
+            html += '</div>';
+            return html;
+        }
+
+        function displayBatch(data) {
+            var html = '';
+
+            // Summary bar
+            html += '<div class="batch-summary">';
+            html += '<div class="summary-stat ok">OK: ' + data.ok_count + '</div>';
+            html += '<div class="summary-stat fail">Ошибки: ' + data.fail_count + '</div>';
+            html += '</div>';
+
+            // Cards
+            html += '<div class="cards">';
+            data.results.forEach(function(r, i) {
+                html += '<div class="card">';
+                html += '<div class="card-header" onclick="this.parentNode.classList.toggle(\'expanded\')">';
+                html += '<div class="card-left">';
+                html += '<div class="card-filename">' + esc(r.filename) + '</div>';
+                if (r.direction_name) {
+                    html += '<div class="card-direction">' + esc(r.direction_name) + '</div>';
+                }
+                html += '</div>';
+                html += '<div class="card-right">';
+                if (r.match_score > 0) {
+                    html += '<span class="score">' + Math.round(r.match_score) + '%</span>';
+                }
+                html += cardBadge(r);
+                html += '<span class="card-arrow">&#9660;</span>';
+                html += '</div>';
+                html += '</div>';
+
+                html += '<div class="card-body">';
+                html += cardSummary(r);
+                html += renderCardDetail(r);
+                html += '</div>';
+
+                html += '</div>';
+            });
+            html += '</div>';
+
+            elResult.innerHTML = html;
+        }
+
+        // ===== DOWNLOAD =====
+
+        window.allData = null;
+
+        function buildReportHtml(data) {
+            var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Отчёт</title><style>';
+            html += 'body{font-family:Arial,sans-serif;max-width:800px;margin:0 auto;padding:20px;color:#333}';
+            html += 'h1{text-align:center}h3{margin:16px 0 8px 0}.ok{color:#2e7d32;font-weight:bold}.bad{color:#c62828;font-weight:bold}';
+            html += 'table{border-collapse:collapse;width:100%;margin:8px 0 16px 0}';
+            html += 'td{padding:4px 12px;border-bottom:1px solid #e0e0e0}';
+            html += 'td:first-child{font-weight:bold;width:60%}';
+            html += '.section{border:1px solid #e0e0e0;border-radius:10px;padding:15px;margin-bottom:16px}';
+            html += '.s-ok{border-left:4px solid #2e7d32}.s-warn{border-left:4px solid #e65100}';
+            html += '.badge-ok{background:#e8f5e9;color:#2e7d32;padding:2px 8px;border-radius:4px;display:inline-block;margin-left:8px}';
+            html += '.badge-warn{background:#fff3e0;color:#e65100;padding:2px 8px;border-radius:4px;display:inline-block;margin-left:8px}';
+            html += 'summary{cursor:pointer;margin:8px 0}summary.warn{color:#e65100}summary.extra{color:#1565c0}';
+            html += '.item{padding:4px 0;border-bottom:1px solid #f0f0f0}.code{background:#e0e0e0;padding:1px 6px;border-radius:3px}';
+            html += '.footer{text-align:center;color:#999;font-size:12px;margin-top:32px}';
+            html += '@media print{body{max-width:100%}.result-buttons{display:none}}';
+            html += '</style></head><body>';
+            html += '<h1>Отчёт по учебному плану</h1>';
+
+            html += '<h3>Основная информация</h3>';
+            html += '<table>';
+            html += '<tr><td>Специальность</td><td>' + esc(data.specialty) + '</td></tr>';
+            html += '<tr><td>Код направления</td><td>' + esc(data.discipline_code) + '</td></tr>';
+            html += '<tr><td>Год набора</td><td>' + esc(String(data.curriculum_year)) + '</td></tr>';
+            html += '<tr><td>Уровень образования</td><td>' + esc(data.lvl_education) + '</td></tr>';
+            html += '<tr><td>Форма обучения</td><td>' + esc(data.form_education) + '</td></tr>';
+            html += '</table>';
+
+            if (data.flags) {
+                html += '<h3>Наличие разделов</h3><table>';
+                var fl = [
+                    ['Образовательная программа', 'education_program'],
+                    ['Календарный учебный график', 'calendar_graphic'],
+                    ['Учебный план', 'education_plan'],
+                    ['ГИА', 'gia_program'],
+                    ['Рабочая программа воспитания', 'education_program_vosp'],
+                    ['Календарный план ВР', 'curriculum_plan']
+                ];
+                fl.forEach(function(f) {
+                    var ok = data.flags[f[1]];
+                    html += '<tr><td>' + f[0] + '</td><td class="' + (ok ? 'ok' : 'bad') + '">' + (ok ? 'Есть' : 'Отсутствует') + '</td></tr>';
+                });
+                html += '</table>';
+            }
+
+            if (data.sections) {
+                html += '<h3>Сравнение по разделам</h3>';
+                var sn = SECTION_LABELS;
+                Object.keys(data.sections).forEach(function(k) {
+                    var s = data.sections[k];
+                    var ok = !(s.missing_on_site && s.missing_on_site.length) && !(s.missing_in_xml && s.missing_in_xml.length);
+                    html += '<div class="section ' + (ok ? 's-ok' : 's-warn') + '">';
+                    html += '<span style="font-weight:bold;font-size:15pt">' + (sn[k] || k) + '</span>';
+                    html += ok ? '<span class="badge-ok">Все совпало</span>' : '<span class="badge-warn">Есть расхождения</span>';
+                    if (ok) {
+                        html += '<div style="color:#666;margin-top:8px">Совпало: ' + (s.matched ? s.matched.length : 0) + ' дисциплин</div>';
+                    }
+                    if (s.missing_on_site && s.missing_on_site.length) {
+                        html += '<details open><summary class="warn">Отсутствуют на сайте (' + s.missing_on_site.length + ')</summary>';
+                        s.missing_on_site.forEach(function(d) {
+                            html += '<div class="item"><span class="code">' + esc(d.discipline_code || '-') + '</span> ' + esc(d.discipline_name) + '</div>';
+                        });
+                        html += '</details>';
+                    }
+                    if (s.missing_in_xml && s.missing_in_xml.length) {
+                        html += '<details open><summary class="extra">Лишние на сайте (' + s.missing_in_xml.length + ')</summary>';
+                        s.missing_in_xml.forEach(function(d) {
+                            html += '<div class="item"><span class="code">' + esc(d.discipline_code || '-') + '</span> ' + esc(d.discipline_name) + '</div>';
+                        });
+                        html += '</details>';
+                    }
+                    html += '</div>';
+                });
+            }
+
+            html += '<div class="footer">Сформировано ' + new Date().toLocaleString('ru-RU') + ' | Система проверки учебных планов</div>';
+            html += '</body></html>';
+            return html;
+        }
+
+        window.downloadReport = function(format) {
+            var wdata = window.allData;
+            if (!wdata) { alert('Результаты не найдены.'); return; }
+
+            if (wdata.results) {
+                // Batch — показываем каждую ок-карточку
+                var okResults = wdata.results.filter(function(r) { return r.status === 'ok' && r.data; });
+                var parts = [];
+                okResults.forEach(function(r) {
+                    parts.push('<h2>' + esc(r.filename) + ' (' + Math.round(r.match_score) + '% match)</h2>');
+                    if (r.matched_url) parts.push('<p style="color:#666">' + esc(r.matched_url) + '</p>');
+                    parts.push(buildReportHtml(r.data));
+                });
+                var html = '<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{font-family:Arial;max-width:900px;margin:0 auto;padding:20px}h2{border-top:2px solid #333;padding-top:20px;margin-top:30px}</style></head><body>' + parts.join('') + '</body></html>';
+            } else {
+                var html = buildReportHtml(wdata);
+            }
+
+            if (format === 'html') {
+                var blob = new Blob([html], {type: 'text/html;charset=utf-8'});
+                var a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'report_' + new Date().toISOString().slice(0,19).replace(/:/g,'-') + '.html';
+                a.click();
+                URL.revokeObjectURL(a.href);
+            } else {
+                var w = window.open('');
+                w.document.write(html);
+                w.document.close();
+                w.onload = function() { w.print(); };
+            }
+        };
+
+        // ===== INIT =====
+
+        try {
+            var raw = localStorage.getItem('compareResult');
+            if (!raw || raw === 'undefined' || raw === 'null') {
+                raw = localStorage.getItem('compareResults');
+            }
+            if (!raw || raw === 'undefined' || raw === 'null') {
+                showError('Результаты не найдены. Вернитесь на главную и отправьте данные заново.');
+            } else {
+                var data = JSON.parse(raw);
+                window.allData = data;
+                if (data.results) {
+                    displayBatch(data);
+                } else {
+                    displaySingle(data);
+                }
+            }
+        } catch(e) {
+            showError(e.message);
+        }
+    </script>
+</body>
+</html>

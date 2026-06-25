@@ -5,8 +5,8 @@ from pathlib import Path
 # Добавление корневого пути проекта для импорта
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from backend.src.services.xml_parsing_service import XmlParsingService
-from backend.src.schemas.xml_schemas import ResponseModel
+from src.services.xml_parsing_service import XmlParsingService
+from src.schemas.xml_schemas import ResponseModel
 
 
 def main():

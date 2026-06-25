@@ -133,9 +133,19 @@ class WebParsingService:
                         logger.info(f"      [{idx}] Original text: {text}")
                     
                     if target_field == 'practic_programs':
-                        if text not in result_by_year[current_year][target_field]:
-                            result_by_year[current_year][target_field].append(text)
-                            logger.info(f"      Added practic: {text[:50]}")
+                        disc_code, disc_name = self.extract_discipline_code_and_name(text)
+                        if not disc_code or disc_code == text:
+                            code_match = re.match(r'^([A-Z0-9\.\(\)]+?)[_\s]', text)
+                            if code_match:
+                                disc_code = code_match.group(1)
+                                disc_name = text[len(disc_code):].lstrip('_').lstrip(' ').strip()
+                            else:
+                                disc_code = f"UNKNOWN_{idx}"
+                                disc_name = text
+                        disc_detail = {"discipline_name": disc_name, "discipline_code": disc_code}
+                        existing_codes = [d.get('discipline_code') for d in result_by_year[current_year][target_field]]
+                        if disc_code not in existing_codes:
+                            result_by_year[current_year][target_field].append(disc_detail)
                     else:
                         # Сначала пробуем новый улучшенный метод
                         disc_code, disc_name = self.extract_discipline_code_and_name(text)

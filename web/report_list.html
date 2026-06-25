@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Список групп — Проверка учебных планов</title>
+    <script>
+        var APP_BASE = (function () {
+            var p = window.location.pathname;
+            return p.substring(0, p.lastIndexOf('/') + 1);
+        })();
+        var link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = APP_BASE + 'css/global.css';
+        document.head.appendChild(link);
+    </script>
+</head>
+<body>
+    <div class="content">
+        <header>
+            <h1>Список групп</h1>
+        </header>
+
+        <div id="errorMessage" class="error-message" style="display:none;"></div>
+
+        <div id="resultContent"></div>
+
+        <div class="conteiner result-buttons" style="margin-top:24px;">
+            <button class="btn submitBtn" onclick="window.location.href = APP_BASE">Назад к форме</button>
+        </div>
+    </div>
+
+    <script>
+        var elError = document.getElementById('errorMessage');
+        var elResult = document.getElementById('resultContent');
+
+        function esc(s) { return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+        function showError(msg) {
+            elError.style.display = 'block';
+            elError.innerHTML = 'Ошибка: ' + msg;
+            elResult.innerHTML = '';
+        }
+
+        function statusBadge(r) {
+            var cls, text;
+            if (r.status === 'ok' && r.data) {
+                cls = 'card-ok'; text = 'OK';
+            } else if (r.status === 'url_not_found') {
+                cls = 'card-fail'; text = 'Не найдена';
+            } else if (r.status === 'year_mismatch') {
+                cls = 'card-warn'; text = 'Год не найден';
+            } else {
+                cls = 'card-fail'; text = 'Ошибка';
+            }
+            return '<span class="card-badge ' + cls + '">' + text + '</span>';
+        }
+
+        function issuesPreview(r) {
+            if (r.status !== 'ok' || !r.data || !r.data.sections) return '';
+            var parts = [];
+            Object.keys(r.data.sections).forEach(function(k) {
+                var s = r.data.sections[k];
+                var ms = (s.missing_on_site || []).length;
+                var mx = (s.missing_in_xml || []).length;
+                if (ms > 0) parts.push('–' + ms + ' на сайте');
+                if (mx > 0) parts.push('+' + mx + ' лишних');
+            });
+            return parts.length ? '<span class="issues-preview">' + esc(parts.join(', ')) + '</span>' : '<span class="issues-preview ok">Все совпало</span>';
+        }
+
+        function renderList(data) {
+            var html = '';
+
+            html += '<div class="batch-summary">';
+            html += '<div class="summary-stat ok">OK: ' + data.ok_count + '</div>';
+            html += '<div class="summary-stat fail">Ошибки: ' + data.fail_count + '</div>';
+            html += '</div>';
+
+            html += '<table class="batch-table">';
+            html += '<thead><tr>';
+            html += '<th>Направление (группа)</th>';
+            html += '<th>Файл</th>';
+            html += '<th>Статус</th>';
+            html += '<th>Совпадение</th>';
+            html += '</tr></thead><tbody>';
+
+            data.results.forEach(function(r, i) {
+                var groupName = r.direction_name || '—';
+                var clickable = r.status === 'ok' && r.data;
+                var cls = clickable ? ' class="clickable"' : ' class="not-clickable"';
+                var onclick = clickable ? ' onclick="openDetail(' + i + ')"' : '';
+
+                html += '<tr' + cls + onclick + '>';
+                html += '<td class="cell-group">' + esc(groupName) + '</td>';
+                html += '<td class="cell-file">' + esc(r.filename) + '</td>';
+                var errorText = r.error ? '<div class="cell-error">' + esc(r.error) + '</div>' : '';
+                html += '<td class="cell-status">' + statusBadge(r) + '<div class="cell-hint">' + issuesPreview(r) + '</div>' + errorText + '</td>';
+                html += '<td class="cell-score">' + (r.match_score > 0 ? Math.round(r.match_score) + '%' : '—') + '</td>';
+                html += '</tr>';
+            });
+
+            html += '</tbody></table>';
+
+            elResult.innerHTML = html;
+        }
+
+        window.openDetail = function(index) {
+            var raw = localStorage.getItem('compareResults');
+            if (!raw) return;
+            var data = JSON.parse(raw);
+            var item = data.results[index];
+            localStorage.setItem('compareResult', JSON.stringify(item.data));
+            window.location.href = APP_BASE + 'report_detail.html';
+        };
+
+        // ===== INIT =====
+        try {
+            var raw = localStorage.getItem('compareResults');
+            if (!raw || raw === 'undefined' || raw === 'null') {
+                showError('Результаты не найдены. Вернитесь на главную и отправьте данные заново.');
+            } else {
+                var data = JSON.parse(raw);
+                renderList(data);
+            }
+        } catch(e) {
+            showError(e.message);
+        }
+    </script>
+</body>
+</html>

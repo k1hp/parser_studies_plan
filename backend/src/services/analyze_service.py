@@ -1,147 +1,205 @@
-from src.schemas.response_schemas import ApiResponseSchema
+from rapidfuzz import fuzz
+
+from src.schemas.response_schemas import (
+    ApiResponseSchema, SectionResult, FlagsResult, FileCompareResult, BatchCompareResponse,
+)
 from src.schemas.web_schemas import CurriculumModel
 from src.schemas.xml_schemas import DisciplineDetail, ResponseModel
 from src.services.xml_parsing_service import XmlParsingService
 from src.services.web_parsing_service import WebParsingService
+from src.services.parser_links_service import find_program_url
 from src.utils import applogger
-from multipart import file_path
-import os
 from fastapi import HTTPException
-from src.services.pdf_service import PDFService
 
 
 class AnalyzeService:
+
     def __init__(self, web_parser_service: WebParsingService, xml_parser_service: XmlParsingService):
         self.web_parser_service = web_parser_service
         self.xml_parser_service = xml_parser_service
-        # self.pdf_service = pdf_service
-        # self.file_manager = file_manager
 
-    # 1. общая функция анализа
-    def _compare_models(self, web_object: CurriculumModel, xml_object: ResponseModel) -> ApiResponseSchema:
-        result: dict = {}
+    def _match_items(
+        self,
+        xml_items: list[DisciplineDetail],
+        web_items: list[DisciplineDetail],
+    ) -> SectionResult:
+        matched: list[DisciplineDetail] = []
+        missing_on_site: list[DisciplineDetail] = []
+        used_web_indices: set[int] = set()
 
-        for key, value in web_object.model_dump().items():
-            # if key == "speciality" and value == xml_object.direction_name:
-            #     result[key] = value
-            if key == "discipline_code" and value != xml_object.direction_code:
-                # result[key] = value
-                raise HTTPException(400, "Группы не соответствуют в файле и ссылке на сайт")
-            elif isinstance(value, list) and len(value) > 0 and isinstance(value[0], dict):
-                applogger.debug(f"type {type(value)} and {type(value[0])}")
-                result[key] = self._compare_lists(xml_object.disciplines, [DisciplineDetail(**el) for el in value])
+        for xml_item in xml_items:
+            best_idx = -1
+            best_score = 0
 
+            for i, web_item in enumerate(web_items):
+                if i in used_web_indices:
+                    continue
+
+                x_code = xml_item.discipline_code or ""
+                w_code = web_item.discipline_code or ""
+
+                if x_code and w_code and (x_code in w_code or w_code in x_code):
+                    best_idx = i
+                    break
+
+                score = fuzz.ratio(
+                    xml_item.discipline_name.lower(),
+                    web_item.discipline_name.lower(),
+                )
+                if score > best_score:
+                    best_score = score
+                    best_idx = i
+
+            if best_idx >= 0 and (
+                (xml_item.discipline_code and web_items[best_idx].discipline_code
+                 and (xml_item.discipline_code in web_items[best_idx].discipline_code
+                      or web_items[best_idx].discipline_code in xml_item.discipline_code))
+                or best_score >= 80
+            ):
+                used_web_indices.add(best_idx)
+                matched.append(xml_item)
             else:
-                result[key] = value
-                # raise ValueError(f"Unexpected value {value} of {key}")
-            applogger.debug(f"result {result}")
-        return ApiResponseSchema.model_validate(result)
+                missing_on_site.append(xml_item)
 
-    # 2. анализ одной и получение нужного года
+        missing_in_xml = [
+            w for i, w in enumerate(web_items) if i not in used_web_indices
+        ]
+
+        return SectionResult(
+            matched=matched,
+            missing_on_site=missing_on_site,
+            missing_in_xml=missing_in_xml,
+        )
+
+    def _compare_models(
+        self, web_model: CurriculumModel, xml_model: ResponseModel
+    ) -> ApiResponseSchema:
+
+        sections = {}
+        section_xml_map = {
+            "working_programs": xml_model.disciplines,
+            "fos_materials": xml_model.disciplines,
+            "practic_programs": xml_model.practices,
+            "methodical_materials": xml_model.disciplines,
+        }
+
+        for key, xml_items in section_xml_map.items():
+            web_items: list[DisciplineDetail] = getattr(web_model, key)
+            result = self._match_items(list(xml_items), web_items)
+            if result.matched or result.missing_on_site or result.missing_in_xml:
+                sections[key] = result
+
+        flags = FlagsResult(
+            education_program=web_model.education_program,
+            calendar_graphic=web_model.calendar_graphic,
+            education_plan=web_model.education_plan,
+            gia_program=web_model.gia_program,
+            education_program_vosp=web_model.education_program_vosp,
+            curriculum_plan=web_model.curriculum_plan,
+        )
+
+        return ApiResponseSchema(
+            specialty=web_model.specialty,
+            discipline_code=web_model.discipline_code,
+            curriculum_year=str(web_model.curriculum_year),
+            lvl_education=web_model.lvl_education,
+            form_education=web_model.form_education,
+            flags=flags,
+            sections=sections,
+        )
+
     def analyze_one(self, url: str, content: bytes) -> ApiResponseSchema:
         web_data = self.web_parser_service.parse_url(url)
-        applogger.debug("web data", web_data)
         xml_data = self.xml_parser_service.extract_from_content(content)
 
-        applogger.debug(f"lenght {len(web_data)}")
+        if xml_data is None:
+            raise HTTPException(400, "Не удалось распарсить XML/PLX файл")
+
         web_model = None
         for model in web_data:
-            applogger.debug(f"model group {model.specialty}")
             if xml_data.start_year == int(model.curriculum_year):
                 web_model = model
                 break
+
         if web_model is None:
-            raise HTTPException(400, f"Отсутствует модель web по году {xml_data.start_year}")
+            raise HTTPException(
+                400, f"Отсутствуют данные за {xml_data.start_year} год на сайте"
+            )
 
         return self._compare_models(web_model, xml_data)
 
-    def analyze_one_and_create_report(self, url: str, file_path: str, output_pdf_path: str = None) -> bytes:
-        result = self.analyze_one(url, file_path)
+    def analyze_batch(
+        self, files: list[tuple[str, bytes]]
+    ) -> BatchCompareResponse:
+        results: list[FileCompareResult] = []
+        ok_count = 0
+        fail_count = 0
 
-        if output_pdf_path:
-            pdf_bytes = self.pdf_service.create_pdf(result, output_path=output_pdf_path)
-        else:
-            pdf_bytes = self.pdf_service.create_pdf(result)
+        for filename, content in files:
+            try:
+                xml_data = self.xml_parser_service.extract_from_content(content)
+                if xml_data is None:
+                    results.append(FileCompareResult(
+                        filename=filename,
+                        status="parse_error",
+                        error="Не удалось распарсить файл",
+                    ))
+                    fail_count += 1
+                    continue
 
-        return pdf_bytes
+                url, score = find_program_url(xml_data.direction_name)
+                if url is None:
+                    results.append(FileCompareResult(
+                        filename=filename,
+                        status="url_not_found",
+                        direction_name=xml_data.direction_name,
+                        match_score=score,
+                        error="Программа не найдена на сайте — попробуйте обновить кеш ссылок",
+                    ))
+                    fail_count += 1
+                    continue
 
+                web_data = self.web_parser_service.parse_url(url)
+                web_model = None
+                for model in web_data:
+                    if xml_data.start_year == int(model.curriculum_year):
+                        web_model = model
+                        break
 
-    # 3. по соответствию года сразу пачку
-    # def analyze_all(self, files: list[bytes]):
-    #     web_data = self.web_parser_service.parse_url(url)
-    #     web_data = self.extract_from_content(files[0])
-        # xml_data = self.xml_parser_service.extract_all_files(files)
+                if web_model is None:
+                    results.append(FileCompareResult(
+                        filename=filename,
+                        status="year_mismatch",
+                        direction_name=xml_data.direction_name,
+                        match_score=score,
+                        matched_url=url,
+                        error=f"Нет данных за {xml_data.start_year} год на сайте",
+                    ))
+                    fail_count += 1
+                    continue
 
-    def _compare_lists(self, correct_list: list[DisciplineDetail], checking_list: list[DisciplineDetail]) -> list[DisciplineDetail] | list:
-        result_list: list = []
-        # applogger.debug(f"checking list")
-        # applogger.debug(*(f"{el.to_tuple}\n" for el in checking_list))
-        # applogger.debug(f"correct list")
-        # applogger.debug(*(f"{el.to_tuple}\n" for el in correct_list))
-        for correct in correct_list:
-            flag = False
-            for check in checking_list:
-                if correct.discipline_code in check.discipline_code or correct.discipline_name in check.discipline_name:
-                    flag = True
-                    break
+                cmp = self._compare_models(web_model, xml_data)
+                results.append(FileCompareResult(
+                    filename=filename,
+                    status="ok",
+                    direction_name=xml_data.direction_name,
+                    match_score=score,
+                    matched_url=url,
+                    data=cmp,
+                ))
+                ok_count += 1
 
-            if not flag:
-                result_list.append(correct)
-            # if correct.discipline_name not in "".join(el.to_string for el in checking_list):
-            #     result_list.append(correct.to_string)
+            except Exception as e:
+                results.append(FileCompareResult(
+                    filename=filename,
+                    status="parse_error",
+                    error=str(e)[:300],
+                ))
+                fail_count += 1
 
-        return result_list
-
-if __name__ == "__main__":
-    from src.services.file_manager import FileManager
-
-    pdf_service = PDFService(template_dir="../templates")
-    file_manager = FileManager(file_path)
-
-    service = AnalyzeService(
-        WebParsingService(),
-        XmlParsingService(pdf_service=pdf_service),
-        PDFService(),
-        file_manager=file_manager
-    )
-
-    xml = [DisciplineDetail(discipline_name="name1", discipline_code=str(i)) for i in range(10)]
-    ls3 = [DisciplineDetail(discipline_name="name_MM", discipline_code=str(i)) for i in range(10)]
-
-    print(xml[0].to_tuple)
-
-    res = service._compare_lists(xml, ls3)
-    print(res)
-
-    target_url = WebParsingService().parse_url
-    current_script_dir = os.path.dirname(os.path.abspath(__file__))
-    file_path = os.path.abspath(os.path.join(current_script_dir, "..", "directory", "example.plx"))
-    try:
-        analytic_results = service.analyze_one(target_url, file_path)
-        pdf_bytes = service.pdf_service.create_pdf(analytic_results, 'report.pdf')
-    except Exception as e:
-        applogger.error(f"Произошла ошибка: {e}")
-    #result = service.analyze_one(url, file_path=file_path))
-    #pdf_bytes = service.analyze_one_and_create_report(url, file_path, "output/report.pdf")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        return BatchCompareResponse(
+            total=len(files),
+            ok_count=ok_count,
+            fail_count=fail_count,
+            results=results,
+        )

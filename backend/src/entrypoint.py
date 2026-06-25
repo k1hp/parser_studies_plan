@@ -11,7 +11,7 @@ from fastapi.openapi.utils import get_openapi
 from src.config import WEEK, RETRY_DELAY
 from src.config import ROOT_ADDITION_PATH
 from src.dependencies import get_analyze_service, get_pdf_service
-from src.schemas.response_schemas import ApiResponseSchema
+from src.schemas.response_schemas import ApiResponseSchema, BatchCompareResponse
 from src.services.analyze_service import AnalyzeService
 from src.utils import applogger
 from src.services.pdf_service import PDFService
@@ -133,8 +133,39 @@ def convert_report(report_format: REPORT_FORMATS, data: ApiResponseSchema, pdf_s
 
 
 @router.post("/compare/files/{report_format}")
-def analyze_many(report_format: REPORT_FORMATS, ):
-    ...
+async def analyze_many(
+    report_format: REPORT_FORMATS,
+    files: list[UploadFile] = File(...),
+    analyze_service: AnalyzeService = Depends(get_analyze_service),
+    pdf_service: PDFService = Depends(get_pdf_service),
+):
+    file_contents: list[tuple[str, bytes]] = []
+    for f in files:
+        content = await f.read()
+        file_contents.append((f.filename or "unknown", content))
+
+    batch: BatchCompareResponse = analyze_service.analyze_batch(file_contents)
+
+    if report_format == "json":
+        return batch
+
+    # for html/pdf — объединяем ok результаты в один отчёт
+    ok_results = [r for r in batch.results if r.status == "ok" and r.data is not None]
+    if not ok_results:
+        raise HTTPException(400, "Ни один файл не удалось сравнить")
+
+    if report_format == "html":
+        html_parts = []
+        for r in ok_results:
+            html_parts.append(f'<h2>{r.filename} ({r.match_score:.0f}% match)</h2>')
+            html_parts.append(f'<p>URL: {r.matched_url}</p>')
+            html_parts.append(pdf_service.create_html(r.data))
+        combined = '<!DOCTYPE html><html><head><meta charset="utf-8"><style>body{font-family:Arial;max-width:900px;margin:0 auto;padding:20px}h2{border-top:2px solid #333;padding-top:20px;margin-top:30px}</style></head><body>' + ''.join(html_parts) + '</body></html>'
+        return Response(content=combined, media_type="text/html")
+
+    if report_format == "pdf":
+        pdf_bytes = pdf_service.create_pdf(ok_results[0].data)
+        return Response(content=pdf_bytes, media_type="application/pdf")
 
 
 

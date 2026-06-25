@@ -15,7 +15,7 @@ class CurriculumModel(BaseModel):
 
     working_programs: list[DisciplineDetail] = Field(default=[], description="Список рабочих программ дисциплин")
     fos_materials: list[DisciplineDetail] = Field(default=[], description="Список ФОС материалов")
-    practic_programs: list[str] = Field(default=[], description="Список программ практик (не сравниваем)")
+    practic_programs: list[DisciplineDetail] = Field(default=[], description="Список программ практик")
     methodical_materials: list[DisciplineDetail] = Field(default=[], description="Список методических материалов")
 
     gia_program: bool = Field(..., description="Наличие раздела 'ГИА'")

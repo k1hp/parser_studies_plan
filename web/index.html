@@ -15,8 +15,6 @@
         return p.substring(0, p.lastIndexOf('/') + 1);
         })();
 
-        alert(APP_BASE);
-
         var link = document.createElement('link');
         link.rel = 'stylesheet';
         link.href = APP_BASE + 'css/global.css';
@@ -505,7 +503,7 @@
                     showSuccess('Анализ выполнен успешно! Перенаправление...');
                     
                     setTimeout(() => {
-                        window.location.href = APP_BASE + 'page3_result.html';
+                        window.location.href = APP_BASE + 'report_detail.html';
                     }, 500);
                     
                 } catch (error) {
@@ -548,9 +546,9 @@
                     const results = await response.json();
                     localStorage.setItem('compareResults', JSON.stringify(results));
                     showSuccess('Анализ файлов выполнен успешно! Перенаправление...');
-                    
+
                     setTimeout(() => {
-                        window.location.href = APP_BASE + 'page3_result.html';
+                        window.location.href = APP_BASE + 'report_list.html';
                     }, 500);
                     
                 } catch (error) {

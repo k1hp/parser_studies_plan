@@ -1,15 +1,14 @@
 from datetime import datetime
 import os
+import io
+import zipfile
 import xml.etree.ElementTree as ET
 import re
 from pathlib import Path
 
 from src.utils import applogger
 from src.schemas.xml_schemas import ResponseModel, DisciplineDetail, PracticeDetail
-from src.schemas.web_schemas import CurriculumModel
-# from src.models.response_model_xml_parser import ResponseModel, DisciplineDetail
 from src.services.file_manager import FileManager
-from src.services.pdf_service import PDFService
 
 
 class PlxDataExtractor:
@@ -137,9 +136,17 @@ class XmlParsingService:
         self._root = None
 
     def _parse_xml(self, content: bytes) -> ET.Element | None:
-        """Пытается распарсить XML из байтового контента, используя несколько кодировок."""
+        """Пытается распарсить XML из байтового контента, используя несколько кодировок.
+        Если контент — ZIP-архив (PLX), сначала извлекает XML из архива."""
         if not content:
             return None
+
+        # PLX-файлы — это ZIP-архивы с XML внутри
+        if content[:2] == b'PK':
+            content = self._extract_xml_from_zip(content)
+            if content is None:
+                return None
+
         try:
             try:
                 xml_str = content.decode('utf-8')
@@ -157,6 +164,29 @@ class XmlParsingService:
             return None
         except Exception as e:
             applogger.error(f"Неожиданная ошибка при парсинге: {e}")
+            return None
+
+    def _extract_xml_from_zip(self, content: bytes) -> bytes | None:
+        """Извлекает XML из ZIP-архива (PLX-файла)."""
+        try:
+            with zipfile.ZipFile(io.BytesIO(content)) as zf:
+                xml_files = [n for n in zf.namelist() if n.lower().endswith('.xml')]
+                if not xml_files:
+                    applogger.warning("PLX-архив не содержит XML-файлов")
+                    return None
+                # берём первый XML (обычно он один) или тот что без __MACOSX
+                target = xml_files[0]
+                for name in xml_files:
+                    if '__MACOSX' not in name:
+                        target = name
+                        break
+                applogger.info(f"Извлечён XML из PLX: {target}")
+                return zf.read(target)
+        except zipfile.BadZipFile as e:
+            applogger.error(f"PLX-файл повреждён или не является ZIP: {e}")
+            return None
+        except Exception as e:
+            applogger.error(f"Ошибка чтения PLX-архива: {e}")
             return None
 
     def extract_all(self, contents: list[bytes]) -> list[ResponseModel | PracticeDetail]:
@@ -190,91 +220,20 @@ class XmlParsingService:
             practices=practices
         )
 
-class WebParsingService:
-    """Временная заглушка так, как plx парсер был написан быстрее """
-    def __init__(self):
-        ...
-
-    def parse_url(self, url: str) -> CurriculumModel:
-        return CurriculumModel.model_validate({
-            "specialty": "09.03.01 Информатика и вычислительная техника",
-            "discipline_code": "09.03.01",
-            "curriculum_year": "2024",
-            "education_program": True,
-            "lvl_education": "Бакалавриат",
-            "form_education": "Очная",
-            "calendar_graphic": True,
-            "education_plan": True,
-            "working_programs": [
-                DisciplineDetail(discipline_name="Иностранный язык", discipline_code="Б1.О.03"),
-                DisciplineDetail(discipline_name="Физическая культура и спорт", discipline_code="Б1.О.05"),
-                DisciplineDetail(discipline_name="Русский язык и культура речи", discipline_code="Б1.О.06"),
-                DisciplineDetail(discipline_name="Основы информатики", discipline_code="Б1.О.09"),
-                DisciplineDetail(discipline_name="История России", discipline_code="Б1.О.02"),
-                DisciplineDetail(discipline_name="Философия", discipline_code="Б1.О.01"),
-                DisciplineDetail(discipline_name="Безопасность жизнедеятельности", discipline_code="Б1.О.04"),
-                DisciplineDetail(discipline_name="Структуры и алгоритмы обработки данных",
-                                 discipline_code="Б1.О.17.02"),
-                DisciplineDetail(discipline_name="Численные методы", discipline_code="Б1.О.17.03"),
-                DisciplineDetail(discipline_name="Базы данных", discipline_code="Б1.О.17.04"),
-                DisciplineDetail(discipline_name="Сети ЭВМ и телекоммуникации", discipline_code="Б1.О.17.05"),
-                DisciplineDetail(discipline_name="Системный анализ и принятие решений", discipline_code="Б1.О.17.08"),
-                DisciplineDetail(discipline_name="Защита информации", discipline_code="Б1.О.15.02"),
-                DisciplineDetail(discipline_name="Операционные системы", discipline_code="Б1.О.17.01")
-            ],
-            "fos_materials": [
-                DisciplineDetail(discipline_name="Иностранный язык", discipline_code="Б1.О.03"),
-                DisciplineDetail(discipline_name="Базы данных", discipline_code="Б1.О.17.04"),
-                DisciplineDetail(discipline_name="Операционные системы", discipline_code="Б1.О.17.01")
-            ],
-            "practic_programs": [
-                "Производственная практика, технологическая (проектно-технологическая) практика",
-                "Учебная практика, ознакомительная практика"
-            ],
-            "methodical_materials": [
-                DisciplineDetail(discipline_name="Иностранный язык", discipline_code="Б1.О.03"),
-                DisciplineDetail(discipline_name="Русский язык и культура речи", discipline_code="Б1.О.06"),
-                DisciplineDetail(discipline_name="Базы данных", discipline_code="Б1.О.17.04")
-            ],
-            "gia_program": True,
-            "education_program_vosp": True,
-            "curriculum_plan": True
-        })
-
 
 
 if __name__ == "__main__":
-    pdf_service = PDFService(template_dir="../templates")
     current_script_dir = os.path.dirname(os.path.abspath(__file__))
-    # folder_path = os.path.abspath(os.path.join(current_script_dir, "..", "directory"))
     folder_path = str(Path.home() / "Downloads")
     file_manager = FileManager(folder_path)
-    extractor = XmlParsingService(pdf_service=pdf_service)
+    extractor = XmlParsingService()
     files = file_manager.get_files_in_directory()
     contents = file_manager.get_files_contents(files)
-    extracted_items = extractor.extract_all(contents)
 
     if files:
-        for file_path in files:
-            content = file_manager.get_files_contents([file_path])[0]
-
+        for file_path, content in zip(files, contents):
             response = extractor.extract_from_content(content)
-
             if response:
-                base_name = os.path.splitext(os.path.basename(file_path))[0]
-
-                pdf_file_name = f"report_{base_name}.pdf"
-
-                pdf_bytes = pdf_service.create_pdf(response)
-                with open(pdf_file_name, "wb") as f:
-                    f.write(pdf_bytes)
-
-                applogger.info(f"PDF сохранен: {pdf_file_name} (из файла {file_path})")
-
-            #applogger.debug("\nJSON представление:")
-            #applogger.debug(response.model_dump_json(indent=2, ensure_ascii=False))
-
-        #pdf_content = pdf_service.create_pdf(extracted_items)
-
+                applogger.info(response.model_dump_json(indent=2, ensure_ascii=False))
     else:
         applogger.info(f"Файлы не найдены в директории: {folder_path}")

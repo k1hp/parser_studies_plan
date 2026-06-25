@@ -297,6 +297,8 @@ def get_hierarchy_json():
 
 def get_flat_mapping(hierarchy):
 
+    import re
+
     flat = {}
 
     institutes = hierarchy["institutes"]
@@ -308,13 +310,23 @@ def get_flat_mapping(hierarchy):
             for program in programs:
 
                 name = program["program_name"]
-
                 url = program["program_url"]
+                specialty = program.get("specialty", "")
 
                 if not name or not url:
                     continue
 
                 flat[name] = url
+
+                # cleaned: убираем "(приём ...)" и обрезаем пробелы
+                cleaned = re.sub(r'\s*\(приём\s[^)]+\)', '', name).strip()
+                if cleaned and cleaned != name:
+                    flat[cleaned] = url
+
+                # specialty + profile (без годов)
+                if specialty and cleaned != specialty:
+                    combined = f"{specialty}, {cleaned}"
+                    flat[combined] = url
 
     return flat
 
@@ -324,7 +336,7 @@ def get_flat_mapping(hierarchy):
 # НЕЧЁТКИЙ ПОИСК ПРОГРАММЫ В REDIS
 # =========================================================
 
-def find_program_url(query: str, min_score: float = 60.0) -> str | None:
+def find_program_url(query: str, min_score: float = 60.0) -> tuple[str | None, float]:
 
     from rapidfuzz import fuzz
 
@@ -334,23 +346,36 @@ def find_program_url(query: str, min_score: float = 60.0) -> str | None:
         decode_responses=True
     )
 
-    raw = r.get("flat_mapping")
+    try:
+        raw = r.get("flat_mapping")
+    except redis.ResponseError:
+        # ключ есть но не строка — удаляем
+        r.delete("flat_mapping")
+        return None, 0.0
 
     if not raw:
-        return None
+        return None, 0.0
 
-    programs = json.loads(raw)
+    try:
+        programs = json.loads(raw)
+    except (json.JSONDecodeError, TypeError):
+        r.delete("flat_mapping")
+        return None, 0.0
 
-    best_score = 0
+    best_score = 0.0
     best_url = None
 
+    q = query.lower()
     for name, url in programs.items():
-        score = fuzz.ratio(query.lower(), name.lower())
+        n = name.lower()
+        score = max(fuzz.ratio(q, n), fuzz.partial_ratio(q, n))
         if score > best_score:
             best_score = score
             best_url = url
 
-    return best_url if best_score >= min_score else None
+    if best_score >= min_score:
+        return best_url, best_score
+    return None, best_score
 
 
 # =========================================================
@@ -370,6 +395,7 @@ def refresh_redis() -> dict:
     )
 
     pipe = r.pipeline()
+    pipe.delete("flat_mapping", "hierarchy")
     pipe.set("flat_mapping", json.dumps(flat, ensure_ascii=False))
     pipe.set("hierarchy", json.dumps(hierarchy, ensure_ascii=False))
     pipe.execute()
