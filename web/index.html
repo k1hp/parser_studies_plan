@@ -3,7 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <title>Проверка учебных планов</title>
-    <link rel="stylesheet" href="css/global.css">
+    <script>
+        var APP_BASE = (function () {
+        var url = new URL(window.location.href);
+
+        if (!url.pathname.endsWith('/') && !url.pathname.split('/').pop().includes('.')) {
+            url.pathname += '/';
+        }
+
+        var p = url.pathname;
+        return p.substring(0, p.lastIndexOf('/') + 1);
+        })();
+
+        alert(APP_BASE);
+
+        var link = document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = APP_BASE + 'css/global.css';
+        document.head.appendChild(link);
+
+    </script>
 </head>
 <body>
     <!-- Шапка сайта -->
@@ -462,7 +481,7 @@
                     const formData = new FormData();
                     formData.append('file', compareFile);
                     const encodedUrl = encodeURIComponent(url);
-                    const apiUrl = `/api/compare/json?url=${encodedUrl}`;
+                    const apiUrl = `${APP_BASE}api/compare/json?url=${encodedUrl}`;
                     
                     const response = await fetch(apiUrl, {
                         method: 'POST',
@@ -486,7 +505,7 @@
                     showSuccess('Анализ выполнен успешно! Перенаправление...');
                     
                     setTimeout(() => {
-                        window.location.href = 'page3_result.html';
+                        window.location.href = APP_BASE + 'page3_result.html';
                     }, 500);
                     
                 } catch (error) {
@@ -509,7 +528,7 @@
                         formData.append('files', file);
                     });
                     
-                    const endpoint = '/api/compare/files/json'
+                    const endpoint = `${APP_BASE}api/compare/files/json`
                     const response = await fetch(endpoint, {
                         method: 'POST',
                         body: formData
@@ -531,7 +550,7 @@
                     showSuccess('Анализ файлов выполнен успешно! Перенаправление...');
                     
                     setTimeout(() => {
-                        window.location.href = 'page3_result.html';
+                        window.location.href = APP_BASE + 'page3_result.html';
                     }, 500);
                     
                 } catch (error) {

@@ -1,28 +1,65 @@
-from enum import Enum
-from pathlib import Path
 from typing import List, Literal
 
 from fastapi import FastAPI, UploadFile, File, Depends, APIRouter, Response
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from fastapi import HTTPException
+from fastapi.openapi.utils import get_openapi
 
+from src.config import ROOT_ADDITION_PATH
 from src.dependencies import get_analyze_service, get_pdf_service
 from src.schemas.response_schemas import ApiResponseSchema
 from src.services.analyze_service import AnalyzeService
 from src.utils import applogger
 from src.services.pdf_service import PDFService
-
+from src.utils import generate_openapi_path
 
 app = FastAPI(
     docs_url="/docs",
-    openapi_url="/docs/openapi.json"  # Обязательно добавьте этот префикс!
+    openapi_url=generate_openapi_path()
 )
 router = APIRouter(prefix="/api")
 
 ALL_FORMATS = Literal["json", "html", "pdf"]
 REPORT_FORMATS = Literal["json", "html", "pdf"]
 
+
+#
+def custom_openapi():
+    """
+    Функция для динамической подмены списка серверов в Swagger UI
+    :return:
+    """
+    # Если схема уже была сгенерирована ранее, отдаем её из кэша
+    if app.openapi_schema:
+        return app.openapi_schema
+
+    # Генерируем стандартную схему
+    openapi_schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        description=app.description,
+        routes=app.routes,
+    )
+
+    # Читаем переменную окружения (значение из вашего .env файла)
+    # Если переменная не задана, префикс будет пустым ""
+
+
+    # Принудительно жестко прописываем правильный базовый URL для Swagger
+    # Теперь все curl-запросы будут строиться от http://localhost/checkplans
+    openapi_schema["servers"] = [{"url": "/" + ROOT_ADDITION_PATH.strip("/")}]
+
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+
+# Переопределяем стандартный генератор схемы FastAPI на наш кастомный
+app.openapi = custom_openapi
+
+@router.get("/ping")
+async def ping():
+    return "pong"
 
 
 @router.post("/compare/{report_format}")

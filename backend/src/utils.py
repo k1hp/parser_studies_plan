@@ -1,4 +1,6 @@
 from loguru import logger
+
+from src.config import ROOT_ADDITION_PATH
 from src.schemas.xml_schemas import ResponseModel
 import sys
 
@@ -33,4 +35,12 @@ def print_response(response: ResponseModel) -> None:
     else:
         applogger.debug("\n  Дисциплины не найдены")
 
+def generate_openapi_path(addition_path: str = ROOT_ADDITION_PATH) -> str:
+    return "/" + addition_path.strip("/") + "/docs/openapi.json"
+
 applogger = AppLogger(level="DEBUG").get_logger()
+
+
+
+if __name__ == "__main__":
+    print(generate_openapi_path(ROOT_ADDITION_PATH))

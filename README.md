@@ -4,11 +4,19 @@
 Микросервис для верификации учебных планов на наличие компонентов образовательных программ.
 Основная цель заключается в автоматизации проверки учебных планов 
 Монолитная архитекрура, но при этом она встрается в сервис.
-пример ссылки: https://mauniver.ru/sveden/education/op/63097#prak
+пример ссылки: https://mauniver.ru/sveden/education/op/43292#prak
 
 ## Запуск
 
 ---
+#### 1. создайте .env файл со своими настройками
 ```
-docker compose -f ./docker-compose.prod.yml up --build
+cd backend
+cp .env.example .env
+```
+И укажите ваши чувствительные данные
+
+#### 2. запустите compose сборку
+```
+docker compose -f docker-compose.prod.yml up --build --remove-orphans
 ```

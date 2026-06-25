@@ -12,3 +12,5 @@ load_dotenv(PROJECT_DIR / ".env")
 SMB_PATH = os.getenv("SMB_PATH", "")
 SMB_USERNAME = os.getenv("SMB_USERNAME", "")
 SMB_PASSWORD = os.getenv("SMB_PASSWORD", "")
+
+ROOT_ADDITION_PATH = os.getenv("ROOT_ADDITION_PATH", "")

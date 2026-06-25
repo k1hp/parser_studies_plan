@@ -6,26 +6,48 @@ services:
     networks:
       - server-network
     restart: always
-  #    ports:
-  #      - "8000:8000"
-  #    env_file:
-  #      - .env
-  #    volumes: # убрать для ci cd
-  #      - ./backend/src:/fastapi-service/src  # для горячей перезагрузки при разработке
 
   nginx:
     build:
       context: ./web
+    env_file:
+      - ./backend/.env
     container_name: nginx-proxy
     ports:
-      - "8888:80"
+      - "8080:80"
+    volumes:
+      - ./web:/usr/share/nginx/html
+      - ./web/template.nginx.conf:/etc/nginx/templates/default.conf.template:ro
+    environment:
+      # префикс, который подставится в конфиг (в вашем случае /checkplans)
+      - DOCS_PREFIX=${ROOT_ADDITION_PATH}
     networks:
       - server-network
 
-    volumes:
-      - ./web:/usr/share/nginx/html
+    restart: always
+
     depends_on:
       - fastapi-service-analyze
+
+  apache:
+    image: httpd:2.4-alpine
+    container_name: apache_proxy
+    ports:
+      - "80:80"
+    volumes:
+      - ./my-apache.conf:/usr/local/apache2/conf/extra/custom-proxy.conf:ro
+    # Команда при старте: включаем модули прокси в главном конфиге и подгружаем ваш файл
+    command: >
+      sh -c "
+      sed -i 's/#LoadModule proxy_module/LoadModule proxy_module/' /usr/local/apache2/conf/httpd.conf &&
+      sed -i 's/#LoadModule proxy_http_module/LoadModule proxy_http_module/' /usr/local/apache2/conf/httpd.conf &&
+      echo 'Include conf/extra/custom-proxy.conf' >> /usr/local/apache2/conf/httpd.conf &&
+      httpd-foreground
+      "
+    restart: always
+
+    networks:
+      - server-network
 
 networks:
   server-network:
